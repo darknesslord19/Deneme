@@ -1,8 +1,0 @@
-{
-  "name": "WhiteDragon",
-  "description": "Kişisel CloudStream eklenti reposu",
-  "manifestVersion": 1,
-  "pluginLists": [
-    "https://raw.githubusercontent.com/darknesslord19/Deneme/builds/plugins.json"
-  ]
-}
