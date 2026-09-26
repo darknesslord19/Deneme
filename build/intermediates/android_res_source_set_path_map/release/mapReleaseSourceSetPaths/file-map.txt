@@ -1,8 +1,0 @@
-com.nikyokki.HDFilmCehennemi-pngs-0 /Users/gokturksahan/Desktop/nik-cloudstream/HDFilmCehennemi/build/generated/res/pngs/release
-com.nikyokki.HDFilmCehennemi-updated_navigation_xml-1 /Users/gokturksahan/Desktop/nik-cloudstream/HDFilmCehennemi/build/generated/updated_navigation_xml/release
-com.nikyokki.HDFilmCehennemi-mergeReleaseResources-2 /Users/gokturksahan/Desktop/nik-cloudstream/HDFilmCehennemi/build/intermediates/incremental/release/mergeReleaseResources/merged.dir
-com.nikyokki.HDFilmCehennemi-mergeReleaseResources-3 /Users/gokturksahan/Desktop/nik-cloudstream/HDFilmCehennemi/build/intermediates/incremental/release/mergeReleaseResources/stripped.dir
-com.nikyokki.HDFilmCehennemi-release-4 /Users/gokturksahan/Desktop/nik-cloudstream/HDFilmCehennemi/build/intermediates/merged_res/release/mergeReleaseResources
-com.nikyokki.HDFilmCehennemi-release-5 /Users/gokturksahan/Desktop/nik-cloudstream/HDFilmCehennemi/build/intermediates/packaged_res/release/packageReleaseResources
-com.nikyokki.HDFilmCehennemi-main-6 /Users/gokturksahan/Desktop/nik-cloudstream/HDFilmCehennemi/src/main/res
-com.nikyokki.HDFilmCehennemi-release-7 /Users/gokturksahan/Desktop/nik-cloudstream/HDFilmCehennemi/src/release/res
