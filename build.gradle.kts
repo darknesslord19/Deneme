@@ -1,23 +1,17 @@
-import com.android.build.api.dsl.LibraryExtension
 import com.lagradost.cloudstream3.gradle.CloudstreamExtension
-import org.gradle.api.plugins.JavaPluginExtension
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
-
-plugins {
-    kotlin("jvm")
-}
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 buildscript {
     repositories {
         google()
         mavenCentral()
+        gradlePluginPortal()
         maven("https://jitpack.io")
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:9.1.1")
-        classpath("com.github.recloudstream:gradle:81b1d424d2")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.0")
+        classpath("com.android.tools.build:gradle:8.4.0")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.23")
+        classpath("com.github.recloudstream:gradle:master-SNAPSHOT")
     }
 }
 
@@ -29,73 +23,37 @@ allprojects {
     }
 }
 
-fun Project.cloudstream(configuration: CloudstreamExtension.() -> Unit) =
-    extensions.getByName<CloudstreamExtension>("cloudstream").configuration()
-
-fun Project.android(configuration: LibraryExtension.() -> Unit) {
-    extensions.getByName<LibraryExtension>("android").apply {
-        project.extensions.findByType(JavaPluginExtension::class.java)?.apply {
-            toolchain { languageVersion.set(JavaLanguageVersion.of(17)) }
-        }
-        configuration()
-    }
-}
-
 subprojects {
     apply(plugin = "com.android.library")
+    apply(plugin = "kotlin-android")
     apply(plugin = "com.lagradost.cloudstream3.gradle")
 
-    cloudstream {
-        setRepo(System.getenv("GITHUB_REPOSITORY") ?: "https://github.com/csprofesor/nik-cloudstream")
-        authors = listOf("gsrepo")
+    extensions.configure<CloudstreamExtension> {
+        // Yayıncının GitHub kullanıcı adı, örn. "darknesslord19"
+        authors = listOf("darknesslord19")
     }
 
-    android {
-        namespace = "com.nikyokki"
-        compileSdk = 36
-        defaultConfig { minSdk = 21 }
-        lint { targetSdk = 36 }
+    extensions.configure<com.android.build.gradle.BaseExtension> {
+        namespace = "com.darknesslord19.plugin"
+        compileSdkVersion(33)
+        defaultConfig {
+            minSdk = 21
+            targetSdk = 33
+        }
         compileOptions {
-            sourceCompatibility = JavaVersion.VERSION_17
-            targetCompatibility = JavaVersion.VERSION_17
+            sourceCompatibility = JavaVersion.VERSION_1_8
+            targetCompatibility = JavaVersion.VERSION_1_8
         }
-        tasks.withType<KotlinJvmCompile>().configureEach {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_17)
-                freeCompilerArgs.addAll(
-                    "-Xno-call-assertions",
-                    "-Xno-param-assertions",
-                    "-Xno-receiver-assertions",
-                    "-Xjspecify-annotations=ignore",
-                    "-Xskip-metadata-version-check"
-                )
-            }
-        }
+    }
+
+    tasks.withType<KotlinCompile> {
+        kotlinOptions.jvmTarget = JavaVersion.VERSION_1_8.toString()
     }
 
     dependencies {
-        add("cloudstream", "com.lagradost:cloudstream3:pre-release")
-        add("implementation", kotlin("stdlib"))
-        add("implementation", "com.github.Blatzar:NiceHttp:0.4.18")
-        add("implementation", "org.jsoup:jsoup:1.22.2")
-        add("implementation", "org.jspecify:jspecify:1.0.0")
-        add("implementation", "com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1")
-        add("implementation", "com.fasterxml.jackson.core:jackson-databind:2.13.1")
-        add("implementation", "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-        add("implementation", "org.mozilla:rhino:1.8.1")
-        add("implementation", "me.xdrop:fuzzywuzzy:1.4.0")
-        add("implementation", "com.google.code.gson:gson:2.14.0")
-        add("implementation", "org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-        add("implementation", "org.bouncycastle:bcpkix-jdk18on:1.84")
+        val implementation by configurations
+        implementation("com.github.recloudstream:cloudstream:pre-release")
+        implementation("com.github.Blatzar:NiceHttp:0.4.11")
+        implementation("org.jsoup:jsoup:1.17.2")
     }
-}
-
-tasks.named("clean") {
-    delete(rootProject.layout.buildDirectory)
-}
-repositories {
-    mavenCentral()
-}
-dependencies {
-    testImplementation(kotlin("test"))
 }
