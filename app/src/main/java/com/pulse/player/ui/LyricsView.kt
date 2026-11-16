@@ -25,6 +25,23 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.ChevronLeft
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import com.pulse.player.data.Prefs
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Remove
@@ -87,6 +104,10 @@ fun LyricsView(song: Song, accent: Color, modifier: Modifier = Modifier) {
     var reload by remember { mutableIntStateOf(0) }
     var offset by remember(song.id) { mutableLongStateOf(LyricsRepository.getOffset(ctx, song)) }
     var showSearch by remember { mutableStateOf(false) }
+    var style by remember { mutableIntStateOf(Prefs.get(ctx).getInt("lyric_style", 0)) }
+    var showStyles by remember { mutableStateOf(false) }
+    var full by remember { mutableStateOf(false) }
+    fun pick(v: Int) { style = v; Prefs.get(ctx).edit().putInt("lyric_style", v).apply() }
 
     LaunchedEffect(song.id, reload) {
         state = LState.Loading
@@ -119,7 +140,13 @@ fun LyricsView(song: Song, accent: Color, modifier: Modifier = Modifier) {
                         OutlinedButton(onClick = { picker.launch(arrayOf("*/*")) }) { Icon(Icons.Rounded.FolderOpen, null); Text(" .lrc Yükle") }
                     }
                 }
-                is LState.Found -> SyncedLyrics(s.r, offset, accent)
+                is LState.Found -> if (s.r.synced && style >= 0 && style < WordStyle.entries.size)
+                    WordLyricsView(
+                        s.r.lines, offset, accent, WordStyle.entries[style],
+                        Modifier.fillMaxSize().clip(RoundedCornerShape(22.dp)).background(Color.Black.copy(alpha = 0.55f))
+                            .clickable(remember { MutableInteractionSource() }, null) { full = true }
+                    )
+                else SyncedLyrics(s.r, offset, accent)
             }
         }
         if (state is LState.Found) {
@@ -131,8 +158,31 @@ fun LyricsView(song: Song, accent: Color, modifier: Modifier = Modifier) {
                     Text("%+.2fs".format(offset / 1000f), fontSize = 11.sp, color = TextDim)
                     IconButton(onClick = { offset += 250; LyricsRepository.setOffset(ctx, song, offset) }, Modifier.size(32.dp)) { Icon(Icons.Rounded.Add, "İleri", Modifier.size(18.dp)) }
                 }
+                IconButton(onClick = { showStyles = true }, Modifier.size(36.dp)) { Icon(Icons.Rounded.AutoAwesome, "Stil", Modifier.size(20.dp), tint = accent) }
+                if (r.synced) IconButton(onClick = { full = true }, Modifier.size(36.dp)) { Icon(Icons.Rounded.Fullscreen, "Tam ekran", Modifier.size(20.dp)) }
                 IconButton(onClick = { showSearch = true }, Modifier.size(36.dp)) { Icon(Icons.Rounded.Search, "Ara", Modifier.size(20.dp)) }
                 IconButton(onClick = { picker.launch(arrayOf("*/*")) }, Modifier.size(36.dp)) { Icon(Icons.Rounded.FolderOpen, "Dosya", Modifier.size(20.dp)) }
+            }
+        }
+    }
+
+    if (showStyles) StyleSheet(style, accent, onDismiss = { showStyles = false }) { pick(it); showStyles = false }
+
+    val found = state as? LState.Found
+    if (full && found != null && found.r.synced) {
+        val ws = WordStyle.entries.getOrElse(style) { WordStyle.CONSTELLATION }
+        Dialog(onDismissRequest = { full = false }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+            Box(Modifier.fillMaxSize().background(Color.Black).clickable(remember { MutableInteractionSource() }, null) { full = false }) {
+                WordLyricsView(found.r.lines, offset, accent, ws, Modifier.fillMaxSize())
+                Text(
+                    song.title.uppercase(), color = Color.White.copy(alpha = 0.6f), fontSize = 10.sp, letterSpacing = 3.sp,
+                    modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 18.dp)
+                )
+                Row(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { pick((ws.ordinal + WordStyle.entries.size - 1) % WordStyle.entries.size) }) { Icon(Icons.Rounded.ChevronLeft, null, tint = Color.White.copy(alpha = 0.5f)) }
+                    Text("WORD BY WORD  ·  ${ws.label.uppercase()}", color = Color.White.copy(alpha = 0.35f), fontSize = 9.sp, letterSpacing = 2.sp)
+                    IconButton(onClick = { pick((ws.ordinal + 1) % WordStyle.entries.size) }) { Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = 0.5f)) }
+                }
             }
         }
     }
@@ -244,4 +294,30 @@ private fun LyricsSearchDialog(song: Song, accent: Color, onDismiss: () -> Unit,
         confirmButton = { TextButton(onClick = onDismiss) { Text("Kapat") } },
         shape = RoundedCornerShape(24.dp),
     )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StyleSheet(current: Int, accent: Color, onDismiss: () -> Unit, onPick: (Int) -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = Card) {
+        Text("Söz Stili", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 20.dp))
+        Text("Kelime kelime efektler • 20 stil", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+        val items = listOf(-1 to "Klasik Liste") + WordStyle.entries.map { it.ordinal to it.label }
+        LazyVerticalGrid(GridCells.Fixed(2), modifier = Modifier.fillMaxWidth().heightIn(max = 520.dp).navigationBarsPadding(),
+            contentPadding = PaddingValues(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(items.size) { idx ->
+                val (v, name) = items[idx]
+                val sel = v == current
+                Column(
+                    Modifier.clip(RoundedCornerShape(16.dp))
+                        .background(if (sel) accent.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.05f))
+                        .clickable { onPick(v) }.padding(14.dp)
+                ) {
+                    Text(if (v < 0) "LİSTE" else "%02d".format(v + 1), fontSize = 10.sp, letterSpacing = 2.sp, color = if (sel) accent else TextDim)
+                    Text(name, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
+                }
+            }
+        }
+    }
 }
