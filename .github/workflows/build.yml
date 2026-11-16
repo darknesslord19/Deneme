@@ -1,0 +1,73 @@
+name: Pulse Player APK
+
+on:
+  push:
+    branches: [pulse-player]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
+      - name: Build release APK
+        id: build
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          gradle assembleRelease --no-daemon --stacktrace 2>&1 | tee build.log
+
+      - name: Collect output
+        if: always()
+        run: |
+          mkdir -p out
+          cp build.log out/ || true
+          grep -nE "^e: |error:|What went wrong|FAILED|Unresolved|Exception" build.log | head -300 > out/errors.txt || true
+          cp app/build/outputs/apk/release/*.apk out/PulsePlayer.apk 2>/dev/null || true
+          echo "${{ steps.build.outcome }}" > out/status.txt
+          echo "${{ github.sha }}" >> out/status.txt
+          ls -la out
+
+      - name: Push results to pulse-apk branch
+        if: always()
+        run: |
+          cd out
+          git init -q -b pulse-apk
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add -A
+          git commit -qm "Build #${{ github.run_number }} (${{ steps.build.outcome }})"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" pulse-apk
+
+      - uses: actions/upload-artifact@v4
+        if: steps.build.outcome == 'success'
+        with:
+          name: PulsePlayer
+          path: out/PulsePlayer.apk
+
+      - name: GitHub Release
+        if: steps.build.outcome == 'success'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: pulse-v1.0.${{ github.run_number }}
+          name: Pulse Player v1.0 (build ${{ github.run_number }})
+          files: out/PulsePlayer.apk
+          body: Pulse Player — müzik & video oynatıcı. APK'yı indirip kur.
+
+      - name: Fail if build failed
+        if: steps.build.outcome != 'success'
+        run: exit 1

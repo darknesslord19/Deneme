@@ -1,0 +1,4 @@
+-keep class androidx.media3.effect.** { *; }
+-keep class androidx.media3.exoplayer.video.** { *; }
+-dontwarn org.checkerframework.**
+-dontwarn com.google.errorprone.**
