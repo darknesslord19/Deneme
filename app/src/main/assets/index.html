@@ -21,14 +21,24 @@ select{background:var(--p2);border:0;border-radius:8px;padding:7px 8px;font-size
 #playBtn{width:40px;height:40px;border-radius:50%;border:0;background:var(--t);color:#000;font-size:16px;flex:none}
 #seek{flex:1;accent-color:var(--a)}
 #time{font-size:12px;color:var(--m);font-variant-numeric:tabular-nums;min-width:78px;text-align:right}
-#tl{display:flex;gap:6px;overflow-x:auto;padding:8px 10px;background:var(--bg);min-height:78px;align-items:center}
-.clip{flex:none;width:62px;height:62px;border-radius:10px;background:#333 center/cover;position:relative;border:2px solid transparent;overflow:hidden}
-.clip.sel{border-color:var(--a)}
-.clip span{position:absolute;bottom:2px;right:3px;font-size:10px;background:#000a;padding:1px 4px;border-radius:5px}
-.clip i{position:absolute;top:2px;left:3px;font-size:10px;font-style:normal;background:#000a;padding:0 4px;border-radius:5px}
-.clip.title{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;text-align:center;padding:4px}
-.add{flex:none;width:62px;height:62px;border-radius:10px;border:2px dashed #444;background:none;font-size:11px;color:var(--m);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
-.add b{font-size:22px;color:var(--t)}
+#tools{display:flex;gap:6px;overflow-x:auto;padding:7px 10px;background:var(--p);border-top:1px solid #222}
+#tools button{flex:none;background:var(--p2);border:0;border-radius:18px;padding:8px 12px;font-size:12.5px;font-weight:600;white-space:nowrap}
+#tools button.hl{background:linear-gradient(90deg,var(--a),var(--a2))}
+#tlw{position:relative;overflow:auto;background:var(--bg);max-height:150px;min-height:82px}
+#tlin{position:relative;min-height:80px}
+#ruler{position:absolute;left:0;top:0;height:16px;right:0;font-size:9px;color:var(--m)}
+#ruler span{position:absolute;top:2px;border-left:1px solid #444;padding-left:2px;height:12px}
+.cb{position:absolute;top:18px;height:52px;border-radius:8px;background:#333 left center/auto 100% repeat-x;border:2px solid transparent;overflow:hidden}
+.cb.sel{border-color:var(--a)}
+.cb span{position:absolute;bottom:2px;left:4px;font-size:10px;background:#000a;padding:1px 4px;border-radius:5px}
+.cb.title{font-size:11px;font-weight:800;padding:6px}
+.ob{position:absolute;height:24px;border-radius:6px;font-size:11px;line-height:20px;padding:0 16px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:2px solid transparent;touch-action:none}
+.ob.sel{border-color:#fff}
+.ob .hd{position:absolute;right:0;top:0;bottom:0;width:14px;background:#0006}
+.ob.text{background:#c2410c}.ob.sticker{background:#a21caf}.ob.media{background:#0e7490}.ob.effect{background:#4d7c0f}
+#ph{position:absolute;top:0;bottom:0;width:2px;background:#fff;pointer-events:none;z-index:3}
+#ph:before{content:'';position:absolute;top:0;left:-5px;border:6px solid transparent;border-top-color:#fff}
+#cv{touch-action:none}
 nav{display:flex;overflow-x:auto;background:var(--p);border-top:1px solid #222}
 nav button{flex:none;background:none;border:0;padding:10px 13px;font-size:13px;color:var(--m);border-bottom:2px solid transparent}
 nav button.on{color:var(--t);border-bottom-color:var(--a)}
@@ -67,11 +77,21 @@ input[type=color]{width:40px;height:30px;border:0;background:none}
   <input type="range" id="seek" min="0" max="1000" value="0">
   <div id="time">0:00 / 0:00</div>
 </div>
-<div id="tl"></div>
+<div id="tools">
+  <button class="hl" data-tool="media">＋ Medya</button>
+  <button data-tool="text">T Yazı</button>
+  <button data-tool="sticker">😊 Çıkartma</button>
+  <button data-tool="layer">🖼 Foto/Video katmanı</button>
+  <button data-tool="effect">✨ Efekt katmanı</button>
+  <button data-tool="split">✂ Böl</button>
+  <button data-tool="title">▭ Yazı klibi</button>
+</div>
+<div id="tlw"><div id="tlin"></div></div>
 <nav id="tabs"></nav>
 <div id="panel"></div>
 <input type="file" id="fMedia" accept="image/*,video/*" multiple hidden>
 <input type="file" id="fMusic" accept="audio/*" hidden>
+<input type="file" id="fOver" accept="image/*,video/*" hidden>
 <div id="ov"><div class="box" id="ovBox"></div></div>
 <div id="toast"></div>
 <script>
@@ -82,7 +102,12 @@ let offA=document.createElement('canvas'),offB=document.createElement('canvas');
 let gA=offA.getContext('2d'),gB=offB.getContext('2d');
 let clips=[],sel=-1,playing=false,curT=0,total=0,aspect='9:16',quality=720,tab='edit',uid=0;
 let actx=null,master=null,mediaDest=null,musicNode=null,musicGain=null,raf=0,playFrom=0,playStart=0,onEnd=null,exporting=null;
-const TD=0.7;
+const TD=0.7,PPS=40,PAD=12;
+let overlays=[],selO=null;
+const AIN={none:'Yok',fade:'Belir',pop:'Patla',slideup:'Aşağıdan',slidel:'Yandan',zoom:'Zoom',spin:'Dönerek'};
+const LOOPS={none:'Sabit',float:'Süzül',pulse:'Nabız',spin:'Dön',shake:'Titre',swing:'Salın'};
+const STICKERS='❤️ 😂 😍 🔥 ⭐ ✨ 🎉 👍 😎 🥳 💯 🌸 🎂 🎵 ☀️ 🌙 💖 😘 👑 🦋 🌈 ⚡ 🎈 🍀 😢 😡 🤩 👏 🙏 💪 🌹 🎁 📍 ➡️ ✅ ❗'.split(' ');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const music={mode:'none',style:'enerjik',fileBuf:null,fileName:'',vol:0.8,buf:null,key:''};
 
 /* ---------- Tanımlar ---------- */
@@ -255,9 +280,16 @@ function drawEffect(g,fx,W,H,lt,gt,c){
 
 function drawText(g,c,lt){
   if(!c.text||!c.text.trim())return;
-  const W=g.canvas.width,H=g.canvas.height,m=Math.min(W,H),fs=m*c.tsize/100,F=FONTS[c.font]||FONTS.bold;
-  const inA=clamp(lt/.6,0,1),outA=clamp((c.dur-lt)/.4,0,1),e=ease(inA);
-  let lines=c.text.split('\n'),alpha=Math.min(1,outA),sc=1,dy=0;
+  const W=g.canvas.width,H=g.canvas.height,m=Math.min(W,H),fs=m*c.tsize/100,bh=c.text.split('\n').length*fs*1.2;
+  const Y=c.tpos==='top'?m*.12+bh/2:c.tpos==='center'?H/2:H-m*.12-bh/2;
+  textCore(g,c,lt,c.dur,W/2,Y,fs,1);
+}
+function rrect(g,x,y,w,h,r){g.beginPath();g.moveTo(x+r,y);g.arcTo(x+w,y,x+w,y+h,r);g.arcTo(x+w,y+h,x,y+h,r);g.arcTo(x,y+h,x,y,r);g.arcTo(x,y,x+w,y,r);g.closePath()}
+function textCore(g,c,lt,dur,X,Y,fs,base){
+  const F=FONTS[c.font]||FONTS.bold;
+  const inA=clamp(lt/.6,0,1),outA=clamp((dur-lt)/.4,0,1),e=ease(inA);
+  const all=c.text.split('\n');
+  let lines=all,alpha=Math.min(1,outA),sc=1,dy=0;
   switch(c.tanim){
     case'fade':alpha*=e;break;case'up':alpha*=e;dy=(1-e)*fs*1.5;break;
     case'pop':{const p=clamp(lt/.5,0,1);sc=p<1?(p<.7?p/.7*1.15:1.15-(p-.7)/.3*.15):1;break}
@@ -265,21 +297,75 @@ function drawText(g,c,lt){
     case'bounce':dy=-Math.abs(Math.sin(lt*4))*fs*.25*Math.max(0,1-lt/3);alpha*=clamp(lt/.2,0,1);break;
     case'type':{let n=Math.floor(lt*16),out=[];for(const l of lines){if(n<=0)break;out.push(l.slice(0,n));n-=l.length}lines=out;break}
   }
-  if(alpha<=0||!lines.length)return;
-  const lh=fs*1.2,bh=lines.length*lh;
-  let y0=c.tpos==='top'?m*.12+lh/2:c.tpos==='center'?H/2-bh/2+lh/2:H-m*.12-bh+lh/2;
-  g.save();g.globalAlpha=alpha;g.font=`${F[1]} ${fs}px ${F[2]}`;g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';
-  g.translate(W/2,y0+dy);g.scale(sc,sc);
+  g.save();g.font=`${F[1]} ${fs}px ${F[2]}`;
+  let mw=Math.max(1,...all.map(l=>g.measureText(l).width));
+  const maxW=g.canvas.width*.86;
+  if(mw+fs*.6>maxW){const k=maxW/(mw+fs*.6);fs*=k;mw*=k;g.font=`${F[1]} ${fs}px ${F[2]}`}
+  const lh=fs*1.2,bh=all.length*lh;
+  const bb={w:(mw+fs*.6)*sc,h:(bh+fs*.3)*sc};
+  if(alpha<=0||!lines.length){g.restore();return bb}
+  const box=c.tbg&&c.tbg!=='none';
+  g.globalAlpha=base*alpha;g.textAlign='center';g.textBaseline='middle';g.lineJoin='round';
+  g.translate(X,Y+dy);g.scale(sc,sc);
+  if(box){g.fillStyle=c.tbg==='box'?'rgba(0,0,0,.6)':c.tcolor;rrect(g,-mw/2-fs*.3,-bh/2-fs*.15,mw+fs*.6,bh+fs*.3,fs*.25);g.fill()}
+  const fillC=c.tbg==='color'?'#111':c.tcolor;
   lines.forEach((l,i)=>{
-    const y=i*lh;
+    const y=-bh/2+lh/2+i*lh;
     if(c.tanim==='wave'){
       const w=g.measureText(l).width;let x=-w/2;g.textAlign='left';
-      [...l].forEach((ch,j)=>{const cw=g.measureText(ch).width,yy=y+Math.sin(lt*5-j*.5)*fs*.15;g.lineWidth=fs*.14;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(ch,x,yy);g.fillStyle=c.tcolor;g.fillText(ch,x,yy);x+=cw});
+      [...l].forEach((ch,j)=>{const cw=g.measureText(ch).width,yy=y+Math.sin(lt*5-j*.5)*fs*.15;if(!box){g.lineWidth=fs*.14;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(ch,x,yy)}g.fillStyle=fillC;g.fillText(ch,x,yy);x+=cw});
       g.textAlign='center';return;
     }
-    if(c.tanim==='neon'){const fl=.75+.25*Math.sin(lt*20)*Math.sin(lt*7);g.shadowColor=c.tcolor;g.shadowBlur=fs*.6*fl;g.fillStyle='#fff';g.fillText(l,0,y);g.shadowBlur=fs*.3;g.fillStyle=c.tcolor;g.globalAlpha=alpha*.6;g.fillText(l,0,y);g.globalAlpha=alpha;g.shadowBlur=0;return}
-    g.lineWidth=fs*.14;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(l,0,y);g.fillStyle=c.tcolor;g.fillText(l,0,y);
+    if(c.tanim==='neon'){const a0=g.globalAlpha,fl=.75+.25*Math.sin(lt*20)*Math.sin(lt*7);g.shadowColor=c.tcolor;g.shadowBlur=fs*.6*fl;g.fillStyle='#fff';g.fillText(l,0,y);g.shadowBlur=fs*.3;g.fillStyle=c.tcolor;g.globalAlpha=a0*.6;g.fillText(l,0,y);g.globalAlpha=a0;g.shadowBlur=0;return}
+    if(!box){g.lineWidth=fs*.14;g.strokeStyle='rgba(0,0,0,.75)';g.strokeText(l,0,y)}g.fillStyle=fillC;g.fillText(l,0,y);
   });
+  g.restore();return bb;
+}
+function drawOverlay(g,o,t){
+  const W=cv.width,H=cv.height,m=Math.min(W,H),lt=t-o.start;
+  if(o.kind==='effect'){drawEffect(g,o.effect,W,H,lt,t,o);o._bb=null;return}
+  let a=o.opacity,s=o.scale,dx=0,dy=0,rot=o.rot*Math.PI/180;
+  if(o.kind!=='text'){
+    const pin=clamp(lt/.4,0,1),e=ease(pin);
+    switch(o.ain){
+      case'fade':a*=e;break;
+      case'pop':s*=pin<1?(pin<.7?pin/.7*1.15:1.15-(pin-.7)/.3*.15):1;break;
+      case'slideup':dy=(1-e)*H*.15;a*=pin;break;
+      case'slidel':dx=-(1-e)*W*.3;a*=pin;break;
+      case'zoom':s*=.3+.7*e;a*=pin;break;
+      case'spin':rot+=(1-e)*Math.PI*2;s*=Math.max(.01,e);break;
+    }
+    a*=clamp((o.dur-lt)/.3,0,1);
+    switch(o.loop){
+      case'float':dy+=Math.sin(lt*2.5)*m*.02;break;
+      case'pulse':s*=1+.08*Math.sin(lt*6);break;
+      case'spin':rot+=lt*2;break;
+      case'shake':dx+=(rnd(Math.floor(lt*20))-.5)*m*.02;dy+=(rnd(Math.floor(lt*20)+3)-.5)*m*.02;break;
+      case'swing':rot+=Math.sin(lt*3)*.25;break;
+    }
+  }
+  const X=o.x*W+dx,Y=o.y*H+dy;let w=0,h=0;
+  g.save();g.globalAlpha=Math.max(0,a);g.translate(X,Y);g.rotate(rot);
+  if(o.kind==='sticker'){const fs=m*.18*s;g.font=`${fs}px sans-serif`;g.textAlign='center';g.textBaseline='middle';g.fillText(o.emoji,0,fs*.05);w=h=fs*1.1}
+  else if(o.kind==='media'){
+    const src=o.type==='video'?o.el:o.img;w=m*.5*s;h=w*o.h/o.w;
+    if(o.type!=='video'||o.el.readyState>=2){
+      g.save();if(o.round>0){rrect(g,-w/2,-h/2,w,h,Math.min(w,h)/2*o.round);g.clip()}
+      g.filter=(FILTERS[o.filter]||FILTERS.none)[1];g.drawImage(src,-w/2,-h/2,w,h);g.filter='none';g.restore();
+      if(o.border!=='none'){g.lineWidth=m*.008;g.strokeStyle=o.border==='white'?'#fff':o.border==='black'?'#000':'#ff2d6f';rrect(g,-w/2,-h/2,w,h,o.round>0?Math.min(w,h)/2*o.round:1);g.stroke()}
+    }
+  }else if(o.kind==='text'){const bb=textCore(g,o,lt,o.dur,0,0,m*o.tsize/100*s,Math.max(0,a));w=bb.w;h=bb.h}
+  g.restore();
+  o._bb={x:X,y:Y,w,h,r:rot};
+}
+function drawOverlays(t){
+  const g=cx;g.save();g.setTransform(1,0,0,1,0,0);g.globalAlpha=1;g.filter='none';g.globalCompositeOperation='source-over';
+  overlays.forEach(o=>{if(t>=o.start&&t<=o.start+o.dur)drawOverlay(g,o,t);else o._bb=null});
+  if(selO&&selO._bb&&!playing&&!exporting){
+    const b=selO._bb,m=Math.min(cv.width,cv.height),p=m*.02;
+    g.translate(b.x,b.y);g.rotate(b.r);g.setLineDash([m*.02,m*.012]);g.lineWidth=m*.005;g.strokeStyle='#fff';g.strokeRect(-b.w/2-p,-b.h/2-p,b.w+2*p,b.h+2*p);g.setLineDash([]);
+    g.fillStyle='#ff2d6f';g.beginPath();g.arc(b.w/2+p,b.h/2+p,m*.035,0,7);g.fill();g.fillStyle='#fff';g.font=`700 ${m*.04}px sans-serif`;g.textAlign='center';g.textBaseline='middle';g.fillText('⤡',b.w/2+p,b.h/2+p);
+  }
   g.restore();
 }
 
@@ -312,11 +398,12 @@ function render(t){
   const c=clips[i],nx=clips[i+1];
   if(nx&&nx.T>0&&t>=nx.start){drawClipTo(gA,c,t-c.start,t);drawClipTo(gB,nx,t-nx.start,t);compose(nx.trans,clamp((t-nx.start)/nx.T,0,1),t)}
   else drawClipTo(cx,c,clamp(t-c.start,0,c.dur),t);
+  drawOverlays(t);
 }
 
 /* ---------- Oynatma ---------- */
 function syncVideos(t){
-  clips.forEach(c=>{
+  clips.concat(overlays).forEach(c=>{
     if(c.type!=='video')return;
     const v=c.el,act=t>=c.start&&t<c.start+c.dur,want=c.trim+clamp(t-c.start,0,c.dur);
     if(c.gain)c.gain.gain.value=c.vol;
@@ -341,70 +428,191 @@ function loop(){
   if(exporting)exporting.prog(t/total);
   raf=requestAnimationFrame(loop);
 }
-function pause(){playing=false;cancelAnimationFrame(raf);stopMusic();clips.forEach(c=>c.type==='video'&&c.el.pause());updBtn()}
+function pause(){playing=false;cancelAnimationFrame(raf);stopMusic();clips.concat(overlays).forEach(c=>c.type==='video'&&c.el.pause());updBtn();render(curT)}
 function updBtn(){$('#playBtn').textContent=playing?'❚❚':'▶'}
-function updTime(){$('#time').textContent=fmt(curT)+' / '+fmt(total);if(!seeking)$('#seek').value=total?curT/total*1000:0}
+function updTime(){
+  $('#time').textContent=fmt(curT)+' / '+fmt(total);if(!seeking)$('#seek').value=total?curT/total*1000:0;
+  const x=PAD+curT*PPS,p=$('#ph');if(p)p.style.left=x+'px';
+  if(playing){const w=$('#tlw');if(x>w.scrollLeft+w.clientWidth-30||x<w.scrollLeft)w.scrollLeft=x-30}
+}
 let seeking=false;
 function seekTo(t){curT=clamp(t,0,total);syncVideos(curT);render(curT);updTime()}
 
 /* ---------- Medya ekleme ---------- */
 function loadImg(url){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url})}
+function mkVideo(url){const v=document.createElement('video');v.playsInline=true;v.preload='auto';v.src=url;v.addEventListener('seeked',()=>{if(!playing)render(curT)});return v}
+async function loadMedia(f){
+  const url=URL.createObjectURL(f);
+  if(f.type.startsWith('video')){
+    const v=mkVideo(url);
+    await new Promise((res,rej)=>{v.onloadedmetadata=res;v.onerror=rej});
+    return {type:'video',el:v,url,w:v.videoWidth,h:v.videoHeight,vd:v.duration||5,name:f.name};
+  }
+  const im=await loadImg(url),s=Math.min(1,1920/Math.max(im.naturalWidth,im.naturalHeight));
+  const cc=document.createElement('canvas');cc.width=Math.round(im.naturalWidth*s);cc.height=Math.round(im.naturalHeight*s);
+  cc.getContext('2d').drawImage(im,0,0,cc.width,cc.height);URL.revokeObjectURL(url);
+  return {type:'image',img:cc,w:cc.width,h:cc.height,name:f.name};
+}
 async function addFiles(files){
   if(!files.length)return;
   toast('Yükleniyor…',1200);
+  let at=sel>=0?sel+1:clips.length;
   for(const f of files){
     try{
-      const url=URL.createObjectURL(f);
-      if(f.type.startsWith('video')){
-        const v=document.createElement('video');v.playsInline=true;v.preload='auto';v.src=url;v.crossOrigin='anonymous';
-        await new Promise((res,rej)=>{v.onloadedmetadata=res;v.onerror=rej});
-        const c=newClip({type:'video',el:v,url,w:v.videoWidth,h:v.videoHeight,vd:v.duration||5,motion:'none',name:f.name});
-        c.dur=Math.max(.5,Math.min(c.vd,60));
-        v.addEventListener('seeked',()=>{if(!playing)render(curT)});
-        v.addEventListener('loadeddata',()=>{if(!c.thumb)mkThumb(c)});
-        clips.push(c);attachAudio(c);
-        v.currentTime=Math.min(.1,c.vd/2);
-      }else{
-        const im=await loadImg(url),mx=1920,s=Math.min(1,mx/Math.max(im.naturalWidth,im.naturalHeight));
-        const cc=document.createElement('canvas');cc.width=Math.round(im.naturalWidth*s);cc.height=Math.round(im.naturalHeight*s);
-        cc.getContext('2d').drawImage(im,0,0,cc.width,cc.height);URL.revokeObjectURL(url);
-        const c=newClip({type:'image',img:cc,w:cc.width,h:cc.height,name:f.name});clips.push(c);mkThumb(c);
+      const m=await loadMedia(f),c=newClip(m);
+      if(c.type==='video'){
+        c.motion='none';c.dur=Math.max(.5,Math.min(c.vd,60));
+        const th=()=>{if(!c.thumb)mkThumb(c)};c.el.addEventListener('seeked',th);c.el.addEventListener('loadeddata',th);
+        c.el.currentTime=Math.min(.1,c.vd/2);
       }
+      clips.splice(at++,0,c);attachAudio(c);if(c.type==='image')mkThumb(c);
     }catch(e){console.log(e);toast('Açılamadı: '+f.name)}
   }
-  if(sel<0)sel=0;layout();drawTL();renderPanel();seekTo(curT);
+  sel=at-1;selO=null;layout();refreshUI();seekTo(clips[sel]?clips[sel].start+.05:0);
 }
 function mkThumb(c){
   const t=document.createElement('canvas');t.width=t.height=96;const g=t.getContext('2d'),src=c.type==='video'?c.el:c.img,s=Math.max(96/c.w,96/c.h);
   try{g.drawImage(src,48-c.w*s/2,48-c.h*s/2,c.w*s,c.h*s);c.thumb=t.toDataURL('image/jpeg',.7)}catch(e){}
   drawTL();
 }
-function addTitle(){const c=newClip({type:'title',text:'Başlığın\nburada',tpos:'center',tanim:'pop',tsize:11,motion:'none',dur:2.5});clips.splice(sel>=0?sel+1:clips.length,0,c);sel=clips.indexOf(c);layout();drawTL();tab='text';drawTabs();renderPanel();seekTo(c.start+.8)}
+function cloneClip(c){
+  if(c.type==='video'){const d=Object.assign({},c,{id:++uid,el:mkVideo(c.url),srcNode:null,gain:null});attachAudio(d);return d}
+  return Object.assign({},c,{id:++uid});
+}
+function addTitle(){const c=newClip({type:'title',text:'Başlığın\nburada',tpos:'center',tanim:'pop',tsize:11,motion:'none',dur:2.5});clips.splice(sel>=0?sel+1:clips.length,0,c);sel=clips.indexOf(c);selO=null;layout();tab='text';refreshUI();seekTo(c.start+.8)}
+function splitAt(t){
+  layout();const i=clips.findIndex(c=>t>c.start+.15&&t<c.start+c.dur-.15);
+  if(i<0)return toast('Beyaz çizgiyi bölmek istediğin klibin ortasına getir');
+  const a=clips[i],off=t-a.start,b=cloneClip(a);
+  b.trans='none';b.dur=a.dur-off;a.dur=off;if(a.type==='video')b.trim=a.trim+off;
+  clips.splice(i+1,0,b);sel=i+1;selO=null;layout();refreshUI();seekTo(t);toast('Klip ikiye bölündü');
+}
+
+/* ---------- Katmanlar ---------- */
+function newOverlay(kind,extra){
+  if(!clips.length){toast('Önce + Medya ile fotoğraf/video ekle');return null}
+  if(playing)pause();layout();
+  let st=curT;if(st>total-.5)st=Math.max(0,total-3);
+  const o=Object.assign({id:++uid,kind,start:st,dur:Math.min(3,Math.max(.5,total-st)),x:.5,y:.5,scale:1,rot:0,opacity:1,ain:'pop',loop:'none',trim:0,vol:1,
+    text:'Yazını yaz',tanim:'pop',tcolor:'#ffffff',tsize:9,font:'bold',tbg:'none',emoji:'❤️',effect:'confetti',round:0,border:'none',filter:'none'},extra);
+  overlays.push(o);selO=o;tab=Object.keys(OTABS[kind])[0];
+  refreshUI();seekTo(o.start+(kind==='text'?.7:.45));return o;
+}
+function cloneOverlay(o){
+  const d=Object.assign({},o,{id:++uid,x:Math.min(.9,o.x+.06),y:Math.min(.9,o.y+.06),_bb:null});
+  if(o.type==='video'){d.el=mkVideo(o.url);d.srcNode=null;d.gain=null;attachAudio(d)}
+  return d;
+}
+$('#tools').onclick=e=>{
+  const b=e.target.closest('button');if(!b)return;
+  switch(b.dataset.tool){
+    case'media':$('#fMedia').click();break;
+    case'text':newOverlay('text');break;
+    case'sticker':newOverlay('sticker',{y:.35,loop:'float'});break;
+    case'layer':if(!clips.length)return toast('Önce + Medya ile fotoğraf/video ekle');$('#fOver').click();break;
+    case'effect':newOverlay('effect',{ain:'none'});break;
+    case'split':if(playing)pause();splitAt(curT);break;
+    case'title':addTitle();break;
+  }
+};
+$('#fOver').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  try{
+    const m=await loadMedia(f);
+    const o=newOverlay('media',Object.assign(m,{ain:'zoom',border:'white',round:.15}));
+    if(o&&o.type==='video'){o.dur=Math.max(.5,Math.min(o.vd,total-o.start));attachAudio(o);refreshUI();seekTo(o.start+.3)}
+  }catch(err){toast('Açılamadı: '+f.name)}
+};
 
 /* ---------- Arayüz ---------- */
+function refreshUI(){layout();drawTabs();drawTL();renderPanel();updTime();if(!playing)render(curT)}
 function drawTL(){
-  const tl=$('#tl');tl.innerHTML='';
+  const tin=$('#tlin'),X=t=>PAD+t*PPS;
+  const lanes=[];
+  [...overlays].sort((a,b)=>a.start-b.start).forEach(o=>{let l=lanes.findIndex(end=>end<=o.start+.01);if(l<0){l=lanes.length;lanes.push(0)}lanes[l]=o.start+o.dur;o._lane=l});
+  const step=total>90?10:total>30?5:total>12?2:1;
+  let h='<div id="ruler">';for(let s=0;s<=total+.01;s+=step)h+=`<span style="left:${X(s)}px">${fmt(s)}</span>`;h+='</div>';
   clips.forEach((c,i)=>{
-    const d=document.createElement('div');d.className='clip'+(i===sel?' sel':'')+(c.type==='title'?' title':'');
-    if(c.type==='title'){d.style.background=`linear-gradient(135deg,${c.bg1},${c.bg2})`;d.textContent=(c.text||'Yazı').split('\n')[0].slice(0,14)}
-    else if(c.thumb)d.style.backgroundImage=`url(${c.thumb})`;
-    d.insertAdjacentHTML('beforeend',`<span>${c.dur.toFixed(1)}s</span>`+(c.type==='video'?'<i>🎬</i>':''));
-    d.onclick=()=>{sel=i;drawTL();renderPanel();if(playing)pause();seekTo(c.start+Math.min(.3,c.dur/2))};
-    tl.appendChild(d);
+    const st=c.type==='title'?`background:linear-gradient(135deg,${c.bg1},${c.bg2})`:c.thumb?`background-image:url(${c.thumb})`:'';
+    h+=`<div class="cb ${i===sel&&!selO?'sel':''} ${c.type==='title'?'title':''}" data-ci="${i}" style="left:${X(c.start)}px;width:${Math.max(10,c.dur*PPS-2)}px;${st}">${c.type==='title'?esc((c.text||'Yazı').split('\n')[0]):''}<span>${c.type==='video'?'🎬 ':''}${c.dur.toFixed(1)}s</span></div>`;
   });
-  const a=document.createElement('button');a.className='add';a.innerHTML='<b>+</b>Medya';a.onclick=()=>$('#fMedia').click();tl.appendChild(a);
-  const b=document.createElement('button');b.className='add';b.innerHTML='<b>T</b>Yazı klibi';b.onclick=addTitle;tl.appendChild(b);
-  const s=tl.querySelector('.sel');if(s)s.scrollIntoView({inline:'nearest',block:'nearest'});
+  overlays.forEach(o=>{
+    const lab={text:'T '+esc(o.text.split('\n')[0]),sticker:o.emoji+' Çıkartma',media:(o.type==='video'?'🎬':'🖼')+' Katman',effect:'✨ '+EFFECTS[o.effect]}[o.kind];
+    h+=`<div class="ob ${o.kind} ${o===selO?'sel':''}" data-oi="${o.id}" style="left:${X(o.start)}px;width:${Math.max(26,o.dur*PPS)}px;top:${76+o._lane*28}px">${lab}<div class="hd"></div></div>`;
+  });
+  h+='<div id="ph"></div>';
+  tin.innerHTML=h;tin.style.width=(X(total)+160)+'px';tin.style.height=(80+lanes.length*28)+'px';
+  updTime();
 }
-const TABS={edit:'Düzenle',filter:'Filtre',effect:'Efekt',motion:'Hareket',trans:'Geçiş',text:'Yazı',music:'Müzik',auto:'Şablon'};
-function drawTabs(){$('#tabs').innerHTML=Object.entries(TABS).map(([k,v])=>`<button data-t="${k}" class="${k===tab?'on':''}">${v}</button>`).join('')}
-$('#tabs').onclick=e=>{const t=e.target.dataset.t;if(!t)return;tab=t;drawTabs();renderPanel()};
+let tdrag=null;
+const tlTime=e=>{const r=$('#tlin').getBoundingClientRect();return clamp((e.clientX-r.left-PAD)/PPS,0,total)};
+$('#tlin').addEventListener('click',e=>{
+  if(e.target.closest('.ob'))return;
+  if(playing)pause();
+  const cb=e.target.closest('.cb'),t=tlTime(e);
+  if(cb){sel=+cb.dataset.ci;selO=null;drawTabs();drawTL();renderPanel()}
+  else if(selO){selO=null;drawTabs();drawTL();renderPanel()}
+  seekTo(t);
+});
+$('#tlin').addEventListener('pointerdown',e=>{
+  const ob=e.target.closest('.ob');if(!ob)return;
+  e.preventDefault();if(playing)pause();
+  const o=overlays.find(x=>x.id==ob.dataset.oi);
+  if(selO!==o){selO=o;tab=Object.keys(OTABS[o.kind])[0];drawTabs();renderPanel();document.querySelectorAll('.ob,.cb').forEach(x=>x.classList.remove('sel'));ob.classList.add('sel')}
+  tdrag={o,el:ob,mode:e.target.classList.contains('hd')?'dur':'move',x0:e.clientX,s0:o.start,d0:o.dur,moved:false};
+  ob.setPointerCapture(e.pointerId);
+});
+$('#tlin').addEventListener('pointermove',e=>{
+  if(!tdrag)return;const o=tdrag.o,dx=e.clientX-tdrag.x0;if(Math.abs(dx)>4)tdrag.moved=true;if(!tdrag.moved)return;
+  if(tdrag.mode==='move')o.start=clamp(tdrag.s0+dx/PPS,0,Math.max(0,total-.3));
+  else o.dur=clamp(tdrag.d0+dx/PPS,.3,Math.max(.3,total-o.start));
+  tdrag.el.style.left=(PAD+o.start*PPS)+'px';tdrag.el.style.width=Math.max(26,o.dur*PPS)+'px';
+  seekTo(tdrag.mode==='move'?o.start+.05:o.start+o.dur-.05);
+});
+const tlUp=()=>{if(!tdrag)return;const d=tdrag;tdrag=null;if(!d.moved)seekTo(Math.max(curT,0)<d.o.start||curT>d.o.start+d.o.dur?d.o.start+.3:curT);drawTL();renderPanel()};
+$('#tlin').addEventListener('pointerup',tlUp);$('#tlin').addEventListener('pointercancel',tlUp);
+
+const TABS={edit:'Düzenle',filter:'Filtre',effect:'Efekt',motion:'Hareket',trans:'Geçiş',text:'Klip yazısı',music:'Müzik',auto:'Şablon'};
+const OTABS={text:{otext:'Yazı'},sticker:{ostk:'Çıkartma'},media:{omed:'Görünüm'},effect:{ofx:'Efekt'}};
+const curTabs=()=>selO?Object.assign({},OTABS[selO.kind],{okat:'Zaman & Boyut',oclose:'✓ Bitti'}):TABS;
+function drawTabs(){const T=curTabs();if(!T[tab])tab=Object.keys(T)[0];$('#tabs').innerHTML=Object.entries(T).map(([k,v])=>`<button data-t="${k}" class="${k===tab?'on':''}">${v}</button>`).join('')}
+$('#tabs').onclick=e=>{const t=e.target.dataset.t;if(!t)return;if(t==='oclose'){selO=null;tab='edit';refreshUI();return}tab=t;drawTabs();renderPanel()};
 const chips=(obj,cur,key,lab=v=>Array.isArray(v)?v[0]:v)=>`<div class="chips">${Object.entries(obj).map(([k,v])=>`<button class="chip ${k===cur?'on':''}" data-k="${key}" data-v="${k}">${lab(v)}</button>`).join('')}</div>`;
-const slider=(lab,key,min,max,step,val,suf='')=>`<div class="row"><label>${lab}</label><input type="range" data-s="${key}" min="${min}" max="${max}" step="${step}" value="${val}"><output>${(+val).toFixed(step<1?1:0)}${suf}</output></div>`;
+const slider=(lab,key,min,max,step,val,suf='')=>`<div class="row"><label>${lab}</label><input type="range" data-s="${key}" data-u="${suf}" min="${min}" max="${max}" step="${step}" value="${val}"><output>${(+val).toFixed(step<1?1:0)}${suf}</output></div>`;
+function overlayPanel(o){
+  let h='';
+  if(tab==='okat'){
+    h+=slider('Başlangıç','o.start',0,Math.max(0,total-.3).toFixed(1),.1,o.start,'s')+slider('Süre','o.dur',.3,Math.max(.3,total-o.start).toFixed(1),.1,o.dur,'s');
+    h+=`<div class="chips"><button class="btn" data-oa="now">Çizgiden başlat</button><button class="btn" data-oa="clip">Klip boyunca</button><button class="btn" data-oa="end">Sona kadar</button></div>`;
+    if(o.kind!=='effect')h+=slider('Boyut','o.scale',.2,4,.05,o.scale)+slider('Döndür','o.rot',-180,180,1,o.rot,'°')+slider('Opaklık','o.opacity',.1,1,.05,o.opacity);
+    if(o.type==='video')h+=slider('Ses','o.vol',0,1,.05,o.vol);
+    h+=`<div class="chips" style="margin-top:6px">${o.kind!=='effect'?'<button class="btn" data-oa="center">Ortala</button>':''}<button class="btn" data-oa="front">Öne al</button><button class="btn" data-oa="back">Arkaya al</button><button class="btn" data-oa="dup">Çoğalt</button><button class="btn" data-oa="del" style="color:#ff6b8b">Sil</button></div>`;
+    h+='<p class="hint">Önizlemede katmanı parmağınla sürükle, pembe tutamaçla büyüt/döndür (iki parmakla da olur). Alttaki renkli çubuğu kaydırarak zamanını, sağ ucunu çekerek süresini değiştir.</p>';
+  }else if(tab==='otext'){
+    h+=`<textarea id="txt" rows="2" placeholder="Yazını buraya yaz…">${esc(o.text)}</textarea>`;
+    h+='<div class="h" style="margin-top:8px">Animasyon</div>'+chips(TANIM,o.tanim,'o.tanim');
+    h+='<div class="h">Stil</div>'+chips({none:'Kenarlıklı',box:'Koyu kutu',color:'Renkli kutu'},o.tbg,'o.tbg');
+    h+='<div class="h">Yazı tipi</div>'+chips(FONTS,o.font,'o.font');
+    h+=`<div class="row"><label>Renk</label><input type="color" data-c="o.tcolor" value="${o.tcolor}"></div>`;
+  }else if(tab==='ostk'){
+    h+=chips(Object.fromEntries(STICKERS.map(s=>[s,s])),o.emoji,'o.emoji');
+    h+='<div class="h">Giriş</div>'+chips(AIN,o.ain,'o.ain')+'<div class="h">Sürekli hareket</div>'+chips(LOOPS,o.loop,'o.loop');
+  }else if(tab==='omed'){
+    h+='<div class="h">Giriş</div>'+chips(AIN,o.ain,'o.ain')+'<div class="h">Sürekli hareket</div>'+chips(LOOPS,o.loop,'o.loop');
+    h+=slider('Köşe','o.round',0,1,.05,o.round)+'<div class="h">Çerçeve</div>'+chips({none:'Yok',white:'Beyaz',black:'Siyah',pink:'Pembe'},o.border,'o.border');
+    h+='<div class="h">Filtre</div>'+chips(FILTERS,o.filter,'o.filter');
+  }else if(tab==='ofx'){
+    const fx=Object.assign({},EFFECTS);delete fx.none;
+    h+='<p class="hint">Bu efekt seçtiğin zaman aralığında tüm kliplerin üstünde görünür.</p>'+chips(fx,o.effect,'o.effect');
+  }
+  $('#panel').innerHTML=h;
+  const tx=$('#txt');if(tx)tx.oninput=()=>{o.text=tx.value;render(curT);const el=document.querySelector(`.ob[data-oi="${o.id}"]`);if(el)el.firstChild.textContent='T '+o.text.split('\n')[0]};
+}
 function renderPanel(){
+  if(selO)return overlayPanel(selO);
   const P=$('#panel'),c=clips[sel];
   const need=['edit','filter','effect','motion','trans','text'].includes(tab);
-  if(need&&!c){P.innerHTML='<p class="hint">Başlamak için aşağıdaki <b>+ Medya</b> ile fotoğraf ve video ekle. Sonra bir klibe dokunup filtre, efekt, geçiş ve yazı ekleyebilirsin. <b>Şablon</b> sekmesi tek dokunuşla hepsini uygular.</p>';return}
+  if(need&&!c){P.innerHTML='<p class="hint"><b>＋ Medya</b> ile fotoğraf ve video ekle.<br>Sonra beyaz çizgiyi istediğin saniyeye getir ve üstteki <b>T Yazı</b>, <b>😊 Çıkartma</b>, <b>🖼 Foto/Video katmanı</b> veya <b>✨ Efekt katmanı</b> ile videonun <b>üstüne</b> ekle.<br><b>✂ Böl</b> klibi çizginin olduğu yerden ikiye ayırır. Yeni medya seçili klibin hemen arkasına eklenir.</p>';return}
   let h='';
   const all=k=>`<button class="btn" data-all="${k}">Tümüne uygula</button>`;
   if(tab==='edit'){
@@ -420,16 +628,18 @@ function renderPanel(){
   else if(tab==='motion')h+=chips(MOTIONS,c.motion,'motion')+all('motion');
   else if(tab==='trans'){h+=sel===0?'<p class="hint">İlk klibin öncesinde geçiş olmaz; geçiş, seçili klibe <b>giriş</b> efektidir.</p>':'<div class="h">Bu klibe giriş geçişi</div>';h+=chips(TRANS,c.trans,'trans')+all('trans')}
   else if(tab==='text'){
-    h+=`<textarea id="txt" rows="2" placeholder="Yazını buraya yaz…">${c.text.replace(/</g,'&lt;')}</textarea>`;
+    h+='<p class="hint" style="margin-top:0">Bu yazı klip boyunca görünür. Serbest konumlu yazı için üstteki <b>T Yazı</b> düğmesini kullan.</p>';
+    h+=`<textarea id="txt" rows="2" placeholder="Yazını buraya yaz…">${esc(c.text)}</textarea>`;
     h+='<div class="h" style="margin-top:8px">Animasyon</div>'+chips(TANIM,c.tanim,'tanim');
     h+='<div class="h">Konum</div>'+chips({top:'Üst',center:'Orta',bottom:'Alt'},c.tpos,'tpos');
+    h+='<div class="h">Stil</div>'+chips({none:'Kenarlıklı',box:'Koyu kutu',color:'Renkli kutu'},c.tbg||'none','tbg');
     h+='<div class="h">Yazı tipi</div>'+chips(FONTS,c.font,'font');
     h+=slider('Boyut','tsize',3,18,.5,c.tsize)+`<div class="row"><label>Renk</label><input type="color" data-c="tcolor" value="${c.tcolor}"></div>`;
   }else if(tab==='music'){
     const cur=music.mode==='none'?'none':music.mode==='file'?'file':music.style;
     const opts={none:'Müzik yok'};Object.entries(STYLES).forEach(([k,v])=>opts[k]='♪ '+v[0]);opts.file='📁 Dosyadan seç';
     h+='<div class="h">Arka plan müziği</div>'+chips(opts,cur,'music');
-    if(music.mode==='file')h+=`<p class="hint">Dosya: ${music.fileName}</p>`;
+    if(music.mode==='file')h+=`<p class="hint">Dosya: ${esc(music.fileName)}</p>`;
     h+=slider('Ses','mvol',0,1,.05,music.vol);
     h+='<p class="hint">Hazır müzikler uygulamanın içinde üretilir, telif sorunu yoktur. Video bitince müzik yavaşça kısılır. Videoların kendi sesi Düzenle sekmesinden ayarlanır.</p>';
   }else if(tab==='auto'){
@@ -440,7 +650,24 @@ function renderPanel(){
   const tx=$('#txt');if(tx)tx.oninput=()=>{c.text=tx.value;if(c.type==='title')drawTL();if(!playing)render(curT)};
 }
 $('#panel').addEventListener('click',async e=>{
-  const b=e.target.closest('button');if(!b)return;const c=clips[sel];
+  const b=e.target.closest('button');if(!b)return;const c=clips[sel],o=selO;
+  if(b.dataset.k&&b.dataset.k.startsWith('o.')){
+    o[b.dataset.k.slice(2)]=b.dataset.v;
+    if(['ain','tanim'].includes(b.dataset.k.slice(2)))seekTo(o.start+.02);
+    drawTL();renderPanel();render(curT);return;
+  }
+  if(b.dataset.oa){
+    const a=b.dataset.oa;
+    if(a==='now'){o.start=clamp(curT,0,Math.max(0,total-.3));o.dur=Math.min(o.dur,total-o.start)}
+    else if(a==='clip'){const cc=clips.find(x=>curT>=x.start&&curT<x.start+x.dur)||clips[0];o.start=cc.start;o.dur=cc.dur}
+    else if(a==='end')o.dur=Math.max(.3,total-o.start);
+    else if(a==='center'){o.x=.5;o.y=.5}
+    else if(a==='front'){overlays.splice(overlays.indexOf(o),1);overlays.push(o)}
+    else if(a==='back'){overlays.splice(overlays.indexOf(o),1);overlays.unshift(o)}
+    else if(a==='dup'){const d=cloneOverlay(o);overlays.push(d);selO=d}
+    else if(a==='del'){overlays.splice(overlays.indexOf(o),1);if(o.el)o.el.pause();selO=null;tab='edit'}
+    refreshUI();if(selO&&(curT<selO.start||curT>selO.start+selO.dur))seekTo(selO.start+.3);return;
+  }
   if(b.dataset.k){
     const k=b.dataset.k,v=b.dataset.v;
     if(k==='music'){
@@ -455,28 +682,69 @@ $('#panel').addEventListener('click',async e=>{
   if(b.dataset.all){const k=b.dataset.all;clips.forEach(x=>{if(k==='dur'){if(x.type!=='video')x.dur=c.dur}else x[k]=c[k]});layout();drawTL();render(curT);toast('Tüm kliplere uygulandı');return}
   if(b.dataset.a){
     const a=b.dataset.a;
-    if(a==='del'){clips.splice(sel,1);sel=Math.min(sel,clips.length-1)}
+    if(a==='del'){if(c.el)c.el.pause();clips.splice(sel,1);sel=Math.min(sel,clips.length-1)}
     else if(a==='left'&&sel>0){[clips[sel-1],clips[sel]]=[clips[sel],clips[sel-1]];sel--}
     else if(a==='right'&&sel<clips.length-1){[clips[sel+1],clips[sel]]=[clips[sel],clips[sel+1]];sel++}
-    else if(a==='dup'){let d;if(c.type==='video'){const v=document.createElement('video');v.playsInline=true;v.preload='auto';v.src=c.url;d=Object.assign({},c,{id:++uid,el:v,srcNode:null,gain:null});v.addEventListener('seeked',()=>{if(!playing)render(curT)});attachAudio(d)}else d=Object.assign({},c,{id:++uid});clips.splice(sel+1,0,d);sel++}
-    if(playing)pause();layout();drawTL();renderPanel();seekTo(clips[sel]?clips[sel].start+.1:0);return;
+    else if(a==='dup'){clips.splice(sel+1,0,cloneClip(c));sel++}
+    if(playing)pause();refreshUI();seekTo(clips[sel]?clips[sel].start+.1:0);return;
   }
   if(b.dataset.tpl){applyTpl(TEMPLATES[+b.dataset.tpl]);return}
 });
 $('#panel').addEventListener('input',e=>{
-  const t=e.target,c=clips[sel];
-  if(t.dataset.s){const k=t.dataset.s,v=+t.value;t.nextElementSibling.textContent=v.toFixed(+t.step<1?1:0)+(k==='dur'||k==='trim'?'s':'');
+  const t=e.target;
+  if(t.dataset.s){
+    let k=t.dataset.s;const v=+t.value;t.nextElementSibling.textContent=v.toFixed(+t.step<1?1:0)+t.dataset.u;
     if(k==='mvol'){music.vol=v;if(musicGain)musicGain.gain.setValueAtTime(v,actx.currentTime);return}
-    c[k]=v;if(k==='trim'){c.dur=Math.min(c.dur,c.vd-c.trim);}
-    if(k==='dur'||k==='trim'){layout();drawTL();updTime();if(k==='trim')renderPanel()}
+    if(k.startsWith('o.')){
+      const o=selO;k=k.slice(2);o[k]=v;
+      if(k==='start'||k==='dur'){if(k==='start')o.dur=Math.min(o.dur,Math.max(.3,total-o.start));drawTL();seekTo(k==='start'?o.start+.05:o.start+o.dur-.05)}
+      else render(curT);
+      return;
+    }
+    const c=clips[sel];c[k]=v;if(k==='trim'){c.dur=Math.min(c.dur,c.vd-c.trim);}
+    if(k==='dur'||k==='trim'){layout();drawTL();if(k==='trim')renderPanel()}
     if(!playing)seekTo(k==='dur'||k==='trim'?c.start+.05:curT);
   }
-  if(t.dataset.c){c[t.dataset.c]=t.value;if(c.type==='title')drawTL();if(!playing)render(curT)}
+  if(t.dataset.c){
+    const k=t.dataset.c;
+    if(k.startsWith('o.')){selO[k.slice(2)]=t.value;render(curT);return}
+    const c=clips[sel];c[k]=t.value;if(c.type==='title')drawTL();if(!playing)render(curT);
+  }
 });
+
+/* ---------- Önizlemede sürükleme ---------- */
+const ptrs=new Map();let cdrag=null;
+function cvPt(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*cv.width/r.width,y:(e.clientY-r.top)*cv.height/r.height}}
+function hitO(p){
+  const m=Math.min(cv.width,cv.height);
+  if(selO&&selO._bb){const b=selO._bb,dx=p.x-b.x,dy=p.y-b.y,cs=Math.cos(-b.r),sn=Math.sin(-b.r),lx=dx*cs-dy*sn,ly=dx*sn+dy*cs;if(Math.hypot(lx-(b.w/2+m*.02),ly-(b.h/2+m*.02))<m*.07)return{o:selO,handle:true}}
+  for(let i=overlays.length-1;i>=0;i--){const o=overlays[i],b=o._bb;if(!b)continue;const dx=p.x-b.x,dy=p.y-b.y,cs=Math.cos(-b.r),sn=Math.sin(-b.r),lx=dx*cs-dy*sn,ly=dx*sn+dy*cs,pd=m*.03;if(Math.abs(lx)<b.w/2+pd&&Math.abs(ly)<b.h/2+pd)return{o}}
+  return null;
+}
+cv.addEventListener('pointerdown',e=>{
+  if(exporting)return;const p=cvPt(e);ptrs.set(e.pointerId,p);try{cv.setPointerCapture(e.pointerId)}catch(_){}
+  if(ptrs.size===2&&selO){const [a,b]=[...ptrs.values()];cdrag={mode:'pinch',d0:Math.max(1,Math.hypot(a.x-b.x,a.y-b.y)),s0:selO.scale,a0:Math.atan2(b.y-a.y,b.x-a.x),r0:selO.rot};return}
+  if(ptrs.size>1)return;
+  if(playing)pause();
+  const h=hitO(p);
+  if(!h){cdrag=null;if(selO){selO=null;refreshUI()}return}
+  if(h.o!==selO){selO=h.o;tab=Object.keys(OTABS[h.o.kind])[0];drawTabs();drawTL();renderPanel();render(curT)}
+  const b=h.o._bb;
+  cdrag=h.handle?{mode:'rs',cx:b.x,cy:b.y,d0:Math.max(1,Math.hypot(p.x-b.x,p.y-b.y)),a0:Math.atan2(p.y-b.y,p.x-b.x),s0:h.o.scale,r0:h.o.rot}:{mode:'move',p0:p,x0:h.o.x,y0:h.o.y};
+});
+cv.addEventListener('pointermove',e=>{
+  if(!ptrs.has(e.pointerId))return;const p=cvPt(e);ptrs.set(e.pointerId,p);if(!cdrag||!selO)return;const o=selO;
+  if(cdrag.mode==='pinch'){if(ptrs.size<2)return;const [a,b]=[...ptrs.values()];o.scale=clamp(cdrag.s0*Math.hypot(a.x-b.x,a.y-b.y)/cdrag.d0,.1,6);o.rot=cdrag.r0+(Math.atan2(b.y-a.y,b.x-a.x)-cdrag.a0)*180/Math.PI}
+  else if(cdrag.mode==='move'){o.x=clamp(cdrag.x0+(p.x-cdrag.p0.x)/cv.width,-.2,1.2);o.y=clamp(cdrag.y0+(p.y-cdrag.p0.y)/cv.height,-.2,1.2)}
+  else{o.scale=clamp(cdrag.s0*Math.hypot(p.x-cdrag.cx,p.y-cdrag.cy)/cdrag.d0,.1,6);o.rot=cdrag.r0+(Math.atan2(p.y-cdrag.cy,p.x-cdrag.cx)-cdrag.a0)*180/Math.PI}
+  o.rot=Math.round(((o.rot+540)%360)-180);render(curT);
+});
+const cvUp=e=>{ptrs.delete(e.pointerId);if(ptrs.size===0){if(cdrag&&selO&&tab==='okat')renderPanel();cdrag=null}};
+cv.addEventListener('pointerup',cvUp);cv.addEventListener('pointercancel',cvUp);
 function applyTpl(T){
   if(!clips.length)return toast('Önce medya ekle');
   clips.forEach((c,i)=>{c.filter=T.fi;c.effect=T.fx[i%T.fx.length];c.motion=c.type==='video'?'none':T.mo[i%T.mo.length];c.trans=T.tr[i%T.tr.length];if(c.type!=='video'&&c.type!=='title')c.dur=T.dur});
-  music.mode='gen';music.style=T.mu;music.key='';
+  music.mode='gen';music.style=T.mu;music.key='';selO=null;
   if(playing)pause();layout();drawTL();renderPanel();seekTo(0);toast(T.n+' uygulandı — ▶ ile izle');
 }
 $('#fMedia').onchange=e=>{addFiles([...e.target.files]);e.target.value=''};
