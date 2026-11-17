@@ -39,6 +39,7 @@ select{background:var(--p2);border:0;border-radius:8px;padding:7px 8px;font-size
 #ph{position:absolute;top:0;bottom:0;width:2px;background:#fff;pointer-events:none;z-index:3}
 #ph:before{content:'';position:absolute;top:0;left:-5px;border:6px solid transparent;border-top-color:#fff}
 #cv{touch-action:none}
+.mb{position:absolute;top:73px;height:18px;border-radius:5px;background:#15803d;font-size:10.5px;line-height:18px;padding:0 6px;white-space:nowrap;overflow:hidden}
 nav{display:flex;overflow-x:auto;background:var(--p);border-top:1px solid #222}
 nav button{flex:none;background:none;border:0;padding:10px 13px;font-size:13px;color:var(--m);border-bottom:2px solid transparent}
 nav button.on{color:var(--t);border-bottom-color:var(--a)}
@@ -79,6 +80,9 @@ input[type=color]{width:40px;height:30px;border:0;background:none}
 </div>
 <div id="tools">
   <button class="hl" data-tool="media">＋ Medya</button>
+  <button class="hl" data-tool="slide">🎞 Fotoğraf Slaytı</button>
+  <button data-tool="mp3">🎵 MP3 / Müzik</button>
+  <button data-tool="va">🎬 Videodan ses al</button>
   <button data-tool="text">T Yazı</button>
   <button data-tool="sticker">😊 Çıkartma</button>
   <button data-tool="layer">🖼 Foto/Video katmanı</button>
@@ -90,7 +94,9 @@ input[type=color]{width:40px;height:30px;border:0;background:none}
 <nav id="tabs"></nav>
 <div id="panel"></div>
 <input type="file" id="fMedia" accept="image/*,video/*" multiple hidden>
-<input type="file" id="fMusic" accept="audio/*" hidden>
+<input type="file" id="fMusic" accept="audio/*,audio/mpeg,.mp3" hidden>
+<input type="file" id="fSlide" accept="image/*" multiple hidden>
+<input type="file" id="fVA" accept="video/*" hidden>
 <input type="file" id="fOver" accept="image/*,video/*" hidden>
 <div id="ov"><div class="box" id="ovBox"></div></div>
 <div id="toast"></div>
@@ -103,7 +109,7 @@ let gA=offA.getContext('2d'),gB=offB.getContext('2d');
 let clips=[],sel=-1,playing=false,curT=0,total=0,aspect='9:16',quality=720,tab='edit',uid=0;
 let actx=null,master=null,mediaDest=null,musicNode=null,musicGain=null,raf=0,playFrom=0,playStart=0,onEnd=null,exporting=null;
 const TD=0.7,PPS=40,PAD=12;
-let overlays=[],selO=null;
+let overlays=[],selO=null,tcat='',stopAt=0;
 const AIN={none:'Yok',fade:'Belir',pop:'Patla',slideup:'Aşağıdan',slidel:'Yandan',zoom:'Zoom',spin:'Dönerek'};
 const LOOPS={none:'Sabit',float:'Süzül',pulse:'Nabız',spin:'Dön',shake:'Titre',swing:'Salın'};
 const STICKERS='❤️ 😂 😍 🔥 ⭐ ✨ 🎉 👍 😎 🥳 💯 🌸 🎂 🎵 ☀️ 🌙 💖 😘 👑 🦋 🌈 ⚡ 🎈 🍀 😢 😡 🤩 👏 🙏 💪 🌹 🎁 📍 ➡️ ✅ ❗'.split(' ');
@@ -114,7 +120,6 @@ const music={mode:'none',style:'enerjik',fileBuf:null,fileName:'',vol:0.8,buf:nu
 const FILTERS={none:['Orijinal','none'],vivid:['Canlı','saturate(1.6) contrast(1.12)'],warm:['Sıcak','saturate(1.2)','rgba(255,150,40,.28)'],cool:['Soğuk','saturate(1.1)','rgba(40,140,255,.28)'],bw:['Siyah-Beyaz','grayscale(1) contrast(1.15)'],noir:['Noir','grayscale(1) contrast(1.6) brightness(.9)'],sepia:['Sepya','sepia(.85) contrast(1.05)'],vintage:['Vintage','sepia(.35) saturate(.8) contrast(1.1) brightness(1.05)','rgba(255,200,120,.2)'],drama:['Dram','contrast(1.4) saturate(1.25) brightness(.9)'],fade:['Soluk','contrast(.85) brightness(1.1) saturate(.75)'],pink:['Pembe','saturate(1.2)','rgba(255,80,170,.25)'],cinema:['Sinema','contrast(1.2) saturate(1.1)','rgba(0,140,140,.22)'],dream:['Rüya','brightness(1.1) saturate(1.3)','rgba(200,120,255,.2)'],gold:['Altın','saturate(1.3) contrast(1.1)','rgba(255,190,0,.25)']};
 const EFFECTS={none:'Yok',vignette:'Vinyet',glitch:'Glitch',vhs:'VHS',sparkle:'Parıltı',snow:'Kar',hearts:'Kalpler',confetti:'Konfeti',flash:'Ritim Flaş',leak:'Işık Sızıntısı',bokeh:'Bokeh',grain:'Film Grenli',rain:'Yağmur'};
 const MOTIONS={none:'Sabit',zoomin:'Yakınlaş',zoomout:'Uzaklaş',panl:'Sola Kay',panr:'Sağa Kay',panup:'Yukarı',pandown:'Aşağı',rotate:'Döndür',pulse:'Ritim Nabız',shake:'Sarsıntı'};
-const TRANS={none:'Kesme',fade:'Solma',black:'Siyaha',white:'Beyaz Flaş',slidel:'Kaydır ←',slideu:'Kaydır ↑',push:'İt',zoom:'Zoom',wipe:'Silme',circle:'Daire',spin:'Dönme',blur:'Bulanık',glitch:'Glitch',diag:'Çapraz'};
 const TANIM={none:'Sabit',fade:'Belir',up:'Yukarı Kay',type:'Daktilo',pop:'Patla',zoom:'Zoom',neon:'Neon',wave:'Dalga',bounce:'Zıpla'};
 const FONTS={bold:['Kalın','900','sans-serif'],classic:['Klasik','700','serif'],hand:['El Yazısı','700','cursive'],mono:['Daktilo','700','monospace'],cond:['Dar','700','sans-serif-condensed, sans-serif']};
 const STYLES={enerjik:['Enerjik',124],sakin:['Sakin',84],duygusal:['Duygusal',70],eglenceli:['Eğlenceli',112],sinematik:['Sinematik',90]};
@@ -213,12 +218,12 @@ function startMusic(from){
   const g=actx.createGain(),now=actx.currentTime,rem=total-from,v=music.vol;
   g.gain.setValueAtTime(v,now);
   if(rem>1.6){g.gain.setValueAtTime(v,now+rem-1.5);g.gain.linearRampToValueAtTime(0,now+rem)}else g.gain.linearRampToValueAtTime(0,now+Math.max(.05,rem));
-  s.connect(g);g.connect(master);s.start(now,from%music.buf.duration);musicNode=s;musicGain=g;
+  s.connect(g);g.connect(master);s.start(now,((music.mode==='file'?music.off||0:0)+from)%music.buf.duration);musicNode=s;musicGain=g;
 }
 function stopMusic(){if(musicNode){try{musicNode.stop()}catch(e){}musicNode.disconnect();musicNode=null}}
 
 /* ---------- Zaman çizelgesi ---------- */
-function transOf(i){return i>0&&clips[i].trans!=='none'?Math.min(TD,clips[i].dur/2,clips[i-1].dur/2):0}
+function transOf(i){return i>0&&clips[i].trans!=='none'?Math.min(clips[i].td||TD,clips[i].dur/2,clips[i-1].dur/2):0}
 function layout(){let t=0;clips.forEach((c,i)=>{c.T=transOf(i);c.start=i?t-c.T:0;t=c.start+c.dur});total=t;return t}
 
 /* ---------- Çizim ---------- */
@@ -369,25 +374,171 @@ function drawOverlays(t){
   g.restore();
 }
 
-function drawC(g,src,sc,rot,al,dx,dy){const W=g.canvas.width,H=g.canvas.height;g.save();g.globalAlpha=al;g.translate(W/2+dx,H/2+dy);g.rotate(rot);g.scale(sc,sc);g.drawImage(src,-W/2,-H/2);g.restore()}
+/* ---------- Geçiş kütüphanesi (CapCut kategorileri) ---------- */
+const TX={none:{n:'Kesme',cat:'Temel'}},TCAT={};
+const PI=Math.PI,sin=Math.sin,cos=Math.cos,abs=Math.abs;
+function T(cat,id,n,f){TX[id]={n,cat,f};(TCAT[cat]=TCAT[cat]||['none'].filter(()=>cat==='Temel')).push(id)}
+const backOut=p=>{const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(p-1,3)+c1*Math.pow(p-1,2)};
+const hump=p=>sin(PI*p);
+const tmpC=document.createElement('canvas'),tmpG=tmpC.getContext('2d'),smC=document.createElement('canvas'),smG=smC.getContext('2d');
+function dc(g,src,o={}){const W=g.canvas.width,H=g.canvas.height;g.save();g.globalAlpha=o.a??1;if(o.op)g.globalCompositeOperation=o.op;if(o.f)g.filter=o.f;g.translate(W/2+(o.x||0)*W,H/2+(o.y||0)*H);if(o.r)g.rotate(o.r);g.scale((o.s??1)*(o.sx??1),(o.s??1)*(o.sy??1));g.drawImage(src,-W/2,-H/2);g.restore()}
+function cd(g,src,path,o){g.save();g.beginPath();path(g,g.canvas.width,g.canvas.height);g.clip();dc(g,src,o);g.restore()}
+function fill(g,col,a){if(a<=0)return;g.save();g.globalAlpha=Math.min(1,a);g.fillStyle=col;g.fillRect(0,0,g.canvas.width,g.canvas.height);g.restore()}
+function ghost(g,src,o,dx,dy,n=6){for(let i=n-1;i>=0;i--)dc(g,src,Object.assign({},o,{x:(o.x||0)+dx*i/n,y:(o.y||0)+dy*i/n,a:(o.a??1)*(i?.28:1)}))}
+function zghost(g,src,o,amt,n=6){for(let i=n-1;i>=0;i--)dc(g,src,Object.assign({},o,{s:(o.s??1)*(1+amt*i/n),a:(o.a??1)*(i?.25:1)}))}
+function rghost(g,src,o,amt,n=6){for(let i=n-1;i>=0;i--)dc(g,src,Object.assign({},o,{r:(o.r||0)+amt*i/n,a:(o.a??1)*(i?.25:1)}))}
+function pixelate(g,src,k){const W=g.canvas.width,H=g.canvas.height,w=Math.max(2,Math.round(W/k)),h=Math.max(2,Math.round(H/k));smC.width=w;smC.height=h;smG.drawImage(src,0,0,w,h);g.save();g.imageSmoothingEnabled=false;g.drawImage(smC,0,0,W,H);g.restore()}
+function rgbSplit(g,src,amt,vert){const W=g.canvas.width,H=g.canvas.height;tmpC.width=W;tmpC.height=H;g.save();g.fillStyle='#000';g.fillRect(0,0,W,H);g.globalCompositeOperation='lighter';
+  [['#f00',-amt],['#0f0',0],['#00f',amt]].forEach(([c,o])=>{tmpG.globalCompositeOperation='source-over';tmpG.drawImage(src,0,0);tmpG.globalCompositeOperation='multiply';tmpG.fillStyle=c;tmpG.fillRect(0,0,W,H);g.drawImage(tmpC,vert?0:o,vert?o:0)});g.restore()}
+function strips(g,src,n,vert,off){const W=g.canvas.width,H=g.canvas.height,L=vert?W:H,s=Math.ceil(L/n);for(let i=0;i<n;i++){const a=i*s,d=off(i,a/L);if(vert)g.drawImage(src,a,0,s,H,a,d*H,s,H);else g.drawImage(src,0,a,W,s,d*W,a,W,s)}}
+function shapePath(kind,g,W,H,r){const cx=W/2,cy=H/2;g.beginPath();
+  if(kind==='circle'){g.arc(cx,cy,r,0,7);return}
+  if(kind==='box'){g.rect(cx-r*W/Math.max(W,H),cy-r*H/Math.max(W,H),2*r*W/Math.max(W,H),2*r*H/Math.max(W,H));return}
+  if(kind==='heart'){const s=r*2;g.moveTo(cx,cy-s*.2);g.bezierCurveTo(cx,cy-s*.5,cx-s*.5,cy-s*.5,cx-s*.5,cy-s*.2);g.bezierCurveTo(cx-s*.5,cy+s*.1,cx,cy+s*.3,cx,cy+s*.5);g.bezierCurveTo(cx,cy+s*.3,cx+s*.5,cy+s*.1,cx+s*.5,cy-s*.2);g.bezierCurveTo(cx+s*.5,cy-s*.5,cx,cy-s*.5,cx,cy-s*.2);return}
+  const pts={diamond:[[0,-1],[1,0],[0,1],[-1,0]],triangle:[[0,-1],[.87,.5],[-.87,.5]],hex:[...Array(6)].map((_,i)=>[cos(i*PI/3),sin(i*PI/3)]),
+    star:[...Array(10)].map((_,i)=>{const a=-PI/2+i*PI/5,q=i%2?.45:1;return[cos(a)*q,sin(a)*q]}),cross:[[-.3,-1],[.3,-1],[.3,-.3],[1,-.3],[1,.3],[.3,.3],[.3,1],[-.3,1],[-.3,.3],[-1,.3],[-1,-.3],[-.3,-.3]]}[kind];
+  pts.forEach(([x,y],i)=>i?g.lineTo(cx+x*r,cy+y*r):g.moveTo(cx+x*r,cy+y*r));g.closePath()}
+const DIRS={l:['←',-1,0],r:['→',1,0],u:['↑',0,-1],d:['↓',0,1]};
+const DIAG={ul:['↖',-1,-1],ur:['↗',1,-1],dl:['↙',-1,1],dr:['↘',1,1]};
+
+/* Temel */
+T('Temel','fade','Solma',(g,A,B,p,e)=>{dc(g,A);dc(g,B,{a:e})});
+T('Temel','black','Siyaha Geçiş',(g,A,B,p)=>{dc(g,p<.5?A:B);fill(g,'#000',1-abs(p*2-1))});
+T('Temel','white','Beyaza Geçiş',(g,A,B,p)=>{dc(g,p<.5?A:B);fill(g,'#fff',1-abs(p*2-1))});
+T('Temel','dissolve','Dağılma',(g,A,B,p)=>{const W=g.canvas.width,H=g.canvas.height,c=18,r=Math.round(c*H/W),w=W/c,h=H/r;dc(g,A);for(let y=0;y<r;y++)for(let x=0;x<c;x++)if(rnd(x*31+y*7)<p)g.drawImage(B,x*w,y*h,w+1,h+1,x*w,y*h,w+1,h+1)});
+T('Temel','zfadein','Yakınlaşarak Sol',(g,A,B,p,e)=>{dc(g,A,{s:1+.3*e});dc(g,B,{s:1.3-.3*e,a:e})});
+T('Temel','zfadeout','Uzaklaşarak Sol',(g,A,B,p,e)=>{dc(g,A,{s:1-.2*e});dc(g,B,{s:.8+.2*e,a:e})});
+T('Temel','rotfade','Dönerek Sol',(g,A,B,p,e)=>{dc(g,A,{r:e*.25,s:1+e*.3});dc(g,B,{r:(e-1)*.25,s:1.3-.3*e,a:e})});
+Object.entries(DIRS).forEach(([k,[s,x,y]])=>T('Temel','mfade_'+k,'Kayarak Sol '+s,(g,A,B,p,e)=>{dc(g,A,{x:x*.12*e,y:y*.12*e});dc(g,B,{x:-x*.12*(1-e),y:-y*.12*(1-e),a:e})}));
+
+/* Kaydırma */
+Object.entries(DIRS).forEach(([k,[s,x,y]])=>{
+  T('Kaydırma','slide_'+k,'Kaydır '+s,(g,A,B,p,e)=>{dc(g,A,{x:x*.3*e,y:y*.3*e});dc(g,B,{x:-x*(1-e),y:-y*(1-e)})});
+  T('Kaydırma','push_'+k,'İt '+s,(g,A,B,p,e)=>{dc(g,A,{x:x*e,y:y*e});dc(g,B,{x:-x*(1-e),y:-y*(1-e)})});
+  T('Kaydırma','uncover_'+k,'Aç '+s,(g,A,B,p,e)=>{dc(g,B,{s:.92+.08*e});dc(g,A,{x:x*e,y:y*e})});
+  T('Kaydırma','bounce_'+k,'Zıplayarak '+s,(g,A,B,p)=>{const b=backOut(p);dc(g,A,{s:1-.1*p});dc(g,B,{x:-x*(1-b),y:-y*(1-b)})});
+});
+Object.entries(DIAG).forEach(([k,[s,x,y]])=>T('Kaydırma','dpush_'+k,'Çapraz İt '+s,(g,A,B,p,e)=>{dc(g,A,{x:x*e,y:y*e});dc(g,B,{x:-x*(1-e),y:-y*(1-e)})}));
+
+/* Kamera */
+T('Kamera','camzin','Kamera Yakınlaş',(g,A,B,p)=>{if(p<.5)dc(g,A,{s:1+p*2*1.2,f:`blur(${(p*16)|0}px)`});else dc(g,B,{s:1+(1-p)*1.2,f:`blur(${((1-p)*16)|0}px)`})});
+T('Kamera','camzout','Kamera Uzaklaş',(g,A,B,p)=>{if(p<.5)dc(g,A,{s:1-p,f:`blur(${(p*12)|0}px)`});else dc(g,B,{s:.5+p*.5,f:`blur(${((1-p)*12)|0}px)`})});
+Object.entries(DIRS).forEach(([k,[s,x,y]])=>T('Kamera','whip_'+k,'Hızlı Çevir '+s,(g,A,B,p,e)=>{const m=hump(p)*.18;ghost(g,A,{x:x*e,y:y*e},-x*m,-y*m);ghost(g,B,{x:-x*(1-e),y:-y*(1-e)},-x*m,-y*m)}));
+T('Kamera','camshake','Kamera Sarsıntısı',(g,A,B,p,e,W,H,gt)=>{const a=hump(p)*.05,f=Math.floor(p*30);dc(g,p<.5?A:B,{s:1.1,x:(rnd(f)-.5)*a,y:(rnd(f+9)-.5)*a,r:(rnd(f+4)-.5)*a})});
+T('Kamera','rotcw','Döndür ↻',(g,A,B,p,e)=>{dc(g,A,{r:e*PI/2,s:1+e*1.2,a:1-e});dc(g,B,{r:(e-1)*PI/2,s:2.2-1.2*e,a:e})});
+T('Kamera','rotccw','Döndür ↺',(g,A,B,p,e)=>{dc(g,A,{r:-e*PI/2,s:1+e*1.2,a:1-e});dc(g,B,{r:(1-e)*PI/2,s:2.2-1.2*e,a:e})});
+T('Kamera','pullin','İçeri Çek',(g,A,B,p,e)=>{dc(g,A,{s:1+e*2,a:1-e});dc(g,B,{s:.2+.8*e,a:Math.min(1,e*2)})});
+T('Kamera','pushout','Dışarı İt',(g,A,B,p,e)=>{dc(g,A,{s:1-.6*e,a:1-e});dc(g,B,{s:3-2*e,a:e})});
+T('Kamera','spinzcw','Dönen Zoom ↻',(g,A,B,p)=>{const s=hump(p);if(p<.5)rghost(g,A,{s:1+s*.6,r:p*PI},s*.4);else rghost(g,B,{s:1+s*.6,r:(p-1)*PI},s*.4)});
+T('Kamera','spinzccw','Dönen Zoom ↺',(g,A,B,p)=>{const s=hump(p);if(p<.5)rghost(g,A,{s:1+s*.6,r:-p*PI},-s*.4);else rghost(g,B,{s:1+s*.6,r:(1-p)*PI},-s*.4)});
+T('Kamera','dolly','Dolly',(g,A,B,p,e)=>{if(p<.5)dc(g,A,{s:1+e*.4});else dc(g,B,{s:1.4-.4*e});fill(g,'#000',hump(p)*.3)});
+
+/* Bulanık */
+T('Bulanık','blur','Bulanıklaş',(g,A,B,p)=>dc(g,p<.5?A:B,{f:`blur(${(hump(p)*22)|0}px)`}));
+T('Bulanık','blurfade','Bulanık Solma',(g,A,B,p,e)=>{dc(g,A,{f:`blur(${(e*20)|0}px)`});dc(g,B,{a:e,f:`blur(${((1-e)*20)|0}px)`})});
+T('Bulanık','zblurin','Zoom Bulanık İçeri',(g,A,B,p)=>zghost(g,p<.5?A:B,{s:1+hump(p)*.3},hump(p)*.5));
+T('Bulanık','zblurout','Zoom Bulanık Dışarı',(g,A,B,p)=>zghost(g,p<.5?A:B,{s:1+hump(p)*.1},-hump(p)*.35));
+Object.entries(DIRS).forEach(([k,[s,x,y]])=>T('Bulanık','mblur_'+k,'Hareket Bulanık '+s,(g,A,B,p,e)=>{const m=hump(p)*.12;ghost(g,A,{},x*m*1.5,y*m*1.5,4);ghost(g,B,{x:-x*(1-e)*.5,y:-y*(1-e)*.5,a:e},x*m,y*m,4)}));
+T('Bulanık','spinblur','Dönen Bulanık',(g,A,B,p)=>rghost(g,p<.5?A:B,{s:1.15},hump(p)*.5,5));
+
+/* Işık */
+T('Işık','flash','Flaş',(g,A,B,p)=>{dc(g,p<.5?A:B,{f:`brightness(${1+hump(p)*2})`});fill(g,'#fff',Math.pow(hump(p),3))});
+T('Işık','burn','Yanma',(g,A,B,p,e)=>{const W=g.canvas.width,H=g.canvas.height;dc(g,A);dc(g,B,{a:e});g.save();g.globalCompositeOperation='screen';const r=g.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*(.3+p));r.addColorStop(0,`rgba(255,200,80,${hump(p)})`);r.addColorStop(.5,`rgba(255,80,0,${hump(p)*.7})`);r.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=r;g.fillRect(0,0,W,H);g.restore()});
+T('Işık','flare','Lens Parlaması',(g,A,B,p,e)=>{const W=g.canvas.width,H=g.canvas.height;dc(g,A);dc(g,B,{a:e});g.save();g.globalCompositeOperation='lighter';const x=W*(p*1.6-.3),gr=g.createLinearGradient(x-W*.3,0,x+W*.3,H*.4);gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(.5,`rgba(255,240,200,${hump(p)*.9})`);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(0,0,W,H);g.restore()});
+T('Işık','leakT','Işık Sızıntısı',(g,A,B,p,e)=>{const W=g.canvas.width,H=g.canvas.height;dc(g,A);dc(g,B,{a:e});g.save();g.globalCompositeOperation='screen';[['255,90,40',0],['255,40,140',.3],['255,200,60',.6]].forEach(([c,o])=>{const x=W*(o+p*.6),r=g.createRadialGradient(x,H*(.2+o),0,x,H*(.2+o),Math.max(W,H)*.7);r.addColorStop(0,`rgba(${c},${hump(p)*.8})`);r.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=r;g.fillRect(0,0,W,H)});g.restore()});
+T('Işık','glow','Parlama',(g,A,B,p)=>{const h=hump(p);dc(g,p<.5?A:B,{f:`brightness(${1+h*1.5}) blur(${(h*8)|0}px)`});dc(g,p<.5?A:B,{op:'screen',a:h*.6})});
+T('Işık','strobe','Stroboskop',(g,A,B,p)=>{const n=Math.floor(p*9);dc(g,n%2?B:A);if(p<.9)fill(g,'#fff',n%3===0?.8:0)});
+T('Işık','rays','Işık Huzmesi',(g,A,B,p,e)=>{const W=g.canvas.width,H=g.canvas.height;dc(g,A);dc(g,B,{a:e});g.save();g.globalCompositeOperation='lighter';g.translate(W/2,H/2);g.rotate(p*1.5);g.fillStyle=`rgba(255,240,190,${hump(p)*.35})`;for(let i=0;i<12;i++){g.rotate(PI/6);g.beginPath();g.moveTo(0,0);g.lineTo(Math.max(W,H),-W*.06);g.lineTo(Math.max(W,H),W*.06);g.fill()}g.restore()});
+T('Işık','expose','Pozlama',(g,A,B,p)=>{dc(g,p<.5?A:B,{f:`brightness(${1+hump(p)*4}) contrast(${1-hump(p)*.5})`})});
+
+/* Glitch */
+T('Glitch','rgb','RGB Ayrışma',(g,A,B,p)=>rgbSplit(g,p<.5?A:B,hump(p)*g.canvas.width*.05));
+T('Glitch','glitch','Dilim Glitch',(g,A,B,p,e,W,H,gt)=>{dc(g,p<.5?A:B);const ph=Math.floor(gt*30);for(let i=0;i<9;i++){const y=rnd(ph*7+i)*H,h=H*(.02+rnd(ph*3+i)*.08),o=(rnd(ph*5+i)-.5)*W*.25*hump(p)*2;g.drawImage(rnd(ph+i)>.5?A:B,0,y,W,h,o,y,W,h)}});
+T('Glitch','pixel','Pikselleş',(g,A,B,p)=>pixelate(g,p<.5?A:B,1+hump(p)*45));
+T('Glitch','noiseT','Dijital Parazit',(g,A,B,p,e,W,H,gt)=>{dc(g,p<.5?A:B);g.save();g.globalAlpha=hump(p)*.6;g.globalCompositeOperation='overlay';g.fillStyle=g.createPattern(noiseCv,'repeat');g.translate(-rnd(gt)*256,-rnd(gt+1)*256);g.fillRect(0,0,W+256,H+256);g.restore();const f=Math.floor(gt*20);for(let i=0;i<6*hump(p);i++){g.fillStyle=['#0ff','#f0f','#ff0','#fff'][i%4];g.globalAlpha=.6;g.fillRect(rnd(f+i)*W,rnd(f+i+50)*H,W*rnd(f+i+9)*.3,H*.01)}g.globalAlpha=1});
+T('Glitch','scan','Tarama Titremesi',(g,A,B,p,e,W,H,gt)=>{const f=Math.floor(gt*40),src=p<.5?A:B;fill(g,'#000',1);strips(g,src,60,false,(i)=>(rnd(f*60+i)-.5)*.15*hump(p))});
+T('Glitch','gshake','Glitch Sarsıntı',(g,A,B,p,e,W,H,gt)=>{const f=Math.floor(gt*25),a=hump(p);dc(g,p<.5?A:B,{s:1.1,x:(rnd(f)-.5)*.08*a,y:(rnd(f+3)-.5)*.05*a});for(let i=0;i<5;i++){const y=rnd(f*9+i)*H,h=H*.05;g.drawImage(p<.5?B:A,0,y,W,h,(rnd(f+i)-.5)*W*.2*a,y,W,h)}});
+T('Glitch','chroma','Renk Kayması',(g,A,B,p)=>rgbSplit(g,p<.5?A:B,hump(p)*g.canvas.height*.04,true));
+T('Glitch','blocks','Blok Glitch',(g,A,B,p,e,W,H,gt)=>{dc(g,A);const f=Math.floor(gt*15);for(let i=0;i<40;i++)if(rnd(i*3+f)<p*1.3){const x=rnd(i)*W,y=rnd(i+40)*H,w=W*(.05+rnd(i+80)*.25),h=H*(.03+rnd(i+90)*.12);g.drawImage(B,x,y,w,h,x+(rnd(f+i)-.5)*W*.05,y,w,h)}if(p>.85)dc(g,B,{a:(p-.85)/.15})});
+T('Glitch','signal','Sinyal Kaybı',(g,A,B,p,e,W,H,gt)=>{const src=p<.5?A:B,o=(hump(p)*gt*3%1)*H;g.drawImage(src,0,o-H);g.drawImage(src,0,o);g.fillStyle=`rgba(255,255,255,${hump(p)*.25})`;for(let i=0;i<8;i++)g.fillRect(0,rnd(Math.floor(gt*30)+i)*H,W,H*.012)});
+T('Glitch','datamosh','Datamosh',(g,A,B,p,e,W,H,gt)=>{fill(g,'#000',1);const f=Math.floor(gt*12);strips(g,A,40,false,i=>(rnd(i+f)-.5)*.4*hump(p));g.save();g.globalAlpha=e;strips(g,B,40,false,i=>(rnd(i*2+f)-.5)*.4*hump(p));g.restore()});
+
+/* Bozulma */
+T('Bozulma','waveh','Dalga Yatay',(g,A,B,p)=>{fill(g,'#000',1);strips(g,p<.5?A:B,120,false,(i,y)=>sin(y*18+p*12)*.06*hump(p))});
+T('Bozulma','wavev','Dalga Dikey',(g,A,B,p)=>{fill(g,'#000',1);strips(g,p<.5?A:B,90,true,(i,x)=>sin(x*18+p*12)*.06*hump(p))});
+T('Bozulma','ripple','Dalgalanma',(g,A,B,p,e)=>{dc(g,A,{s:1+sin(p*28)*.04*hump(p)});dc(g,B,{a:e,s:1+cos(p*28)*.04*hump(p)})});
+T('Bozulma','swirl','Girdap',(g,A,B,p)=>{const h=hump(p);fill(g,'#000',1);const src=p<.5?A:B;for(let k=5;k>=1;k--){cd(g,src,(g,W,H)=>g.arc(W/2,H/2,Math.max(W,H)*k/5,0,7),{r:h*(6-k)*.35,s:1+h*.2})}});
+T('Bozulma','stretchh','Yatay Ger',(g,A,B,p,e)=>{if(p<.5)dc(g,A,{sx:1+e*6,f:`blur(${(e*10)|0}px)`});else dc(g,B,{sx:7-6*e,f:`blur(${((1-e)*10)|0}px)`})});
+T('Bozulma','stretchv','Dikey Ger',(g,A,B,p,e)=>{if(p<.5)dc(g,A,{sy:1+e*6,f:`blur(${(e*10)|0}px)`});else dc(g,B,{sy:7-6*e,f:`blur(${((1-e)*10)|0}px)`})});
+T('Bozulma','squeezev','Sıkıştır Dikey',(g,A,B,p)=>{if(p<.5)dc(g,A,{sy:Math.max(.001,1-p*2)});else dc(g,B,{sy:Math.max(.001,p*2-1)})});
+T('Bozulma','squeezeh','Sıkıştır Yatay',(g,A,B,p)=>{if(p<.5)dc(g,A,{sx:Math.max(.001,1-p*2)});else dc(g,B,{sx:Math.max(.001,p*2-1)})});
+T('Bozulma','bulge','Balık Gözü',(g,A,B,p)=>{const h=hump(p),src=p<.5?A:B;dc(g,src);for(let k=1;k<=3;k++)cd(g,src,(g,W,H)=>g.arc(W/2,H/2,Math.min(W,H)*(.5-k*.12),0,7),{s:1+h*k*.25})});
+
+/* Bölme */
+T('Bölme','splith','Yatay Ayrıl',(g,A,B,p,e)=>{dc(g,B,{s:.9+.1*e});cd(g,A,(g,W,H)=>g.rect(0,0,W,H/2),{y:-e*.5});cd(g,A,(g,W,H)=>g.rect(0,H/2,W,H/2),{y:e*.5})});
+T('Bölme','splitv','Dikey Ayrıl',(g,A,B,p,e)=>{dc(g,B,{s:.9+.1*e});cd(g,A,(g,W,H)=>g.rect(0,0,W/2,H),{x:-e*.5});cd(g,A,(g,W,H)=>g.rect(W/2,0,W/2,H),{x:e*.5})});
+T('Bölme','split4','Dörde Ayrıl',(g,A,B,p,e)=>{dc(g,B,{s:.9+.1*e});[[0,0,-1,-1],[1,0,1,-1],[0,1,-1,1],[1,1,1,1]].forEach(([i,j,x,y])=>cd(g,A,(g,W,H)=>g.rect(i*W/2,j*H/2,W/2,H/2),{x:x*e*.5,y:y*e*.5}))});
+T('Bölme','strips3h','Üç Şerit Yatay',(g,A,B,p,e)=>{dc(g,A);for(let i=0;i<3;i++)cd(g,B,(g,W,H)=>g.rect(0,i*H/3,W,H/3+1),{x:(i%2?1:-1)*(1-ease(clamp(p*1.6-i*.3,0,1)))})});
+T('Bölme','strips3v','Üç Şerit Dikey',(g,A,B,p,e)=>{dc(g,A);for(let i=0;i<3;i++)cd(g,B,(g,W,H)=>g.rect(i*W/3,0,W/3+1,H),{y:(i%2?1:-1)*(1-ease(clamp(p*1.6-i*.3,0,1)))})});
+[6,12].forEach(n=>{
+  T('Bölme','blindsh'+n,'Jaluzi Yatay '+n,(g,A,B,p,e)=>{dc(g,A);cd(g,B,(g,W,H)=>{for(let i=0;i<n;i++)g.rect(0,i*H/n,W,H/n*e+1)})});
+  T('Bölme','blindsv'+n,'Jaluzi Dikey '+n,(g,A,B,p,e)=>{dc(g,A);cd(g,B,(g,W,H)=>{for(let i=0;i<n;i++)g.rect(i*W/n,0,W/n*e+1,H)})});
+});
+T('Bölme','doorsh','Kapı Yatay',(g,A,B,p,e)=>{dc(g,A,{s:1-.1*e});cd(g,B,(g,W,H)=>g.rect(0,0,W/2,H),{x:-(1-e)*.5});cd(g,B,(g,W,H)=>g.rect(W/2,0,W/2,H),{x:(1-e)*.5})});
+T('Bölme','doorsv','Kapı Dikey',(g,A,B,p,e)=>{dc(g,A,{s:1-.1*e});cd(g,B,(g,W,H)=>g.rect(0,0,W,H/2),{y:-(1-e)*.5});cd(g,B,(g,W,H)=>g.rect(0,H/2,W,H/2),{y:(1-e)*.5})});
+T('Bölme','checker','Dama Tahtası',(g,A,B,p)=>{dc(g,A);cd(g,B,(g,W,H)=>{const c=6,r=Math.round(c*H/W),w=W/c,h=H/r;for(let y=0;y<r;y++)for(let x=0;x<c;x++){const q=clamp(p*2-((x+y)%2),0,1);g.rect(x*w,y*h,w*q+1,h)}})});
+
+/* Maske */
+const SH={circle:'Daire',diamond:'Elmas',star:'Yıldız',heart:'Kalp',triangle:'Üçgen',hex:'Altıgen',cross:'Artı',box:'Kutu'};
+Object.entries(SH).forEach(([k,n])=>T('Maske','m_'+k,n+' Açılış',(g,A,B,p,e)=>{dc(g,A);cd(g,B,(g,W,H)=>{const R=Math.hypot(W,H)*(k==='circle'||k==='box'?.55:k==='star'?1.3:.95)*e;shapePath(k,g,W,H,R)})}));
+T('Maske','circlec','Daire Kapanış',(g,A,B,p,e)=>{dc(g,B);cd(g,A,(g,W,H)=>g.arc(W/2,H/2,Math.hypot(W,H)*.55*(1-e),0,7))});
+T('Maske','boxc','Kutu Kapanış',(g,A,B,p,e)=>{dc(g,B);cd(g,A,(g,W,H)=>shapePath('box',g,W,H,Math.max(W,H)*.5*(1-e)))});
+T('Maske','clock','Saat Yönü',(g,A,B,p,e)=>{dc(g,A);cd(g,B,(g,W,H)=>{g.moveTo(W/2,H/2);g.arc(W/2,H/2,Math.hypot(W,H),-PI/2,-PI/2+PI*2*e);g.closePath()})});
+T('Maske','clock2','Çift Saat',(g,A,B,p,e)=>{dc(g,A);cd(g,B,(g,W,H)=>{g.moveTo(W/2,H/2);g.arc(W/2,H/2,Math.hypot(W,H),-PI/2,-PI/2+PI*e);g.closePath();g.moveTo(W/2,H/2);g.arc(W/2,H/2,Math.hypot(W,H),PI/2,PI/2+PI*e);g.closePath()})});
+Object.entries(DIRS).forEach(([k,[s,x,y]])=>T('Maske','wipe_'+k,'Silme '+s,(g,A,B,p,e)=>{dc(g,A);cd(g,B,(g,W,H)=>{const w=W*e,h=H*e;if(x>0)g.rect(0,0,w,H);else if(x<0)g.rect(W-w,0,w,H);else if(y>0)g.rect(0,0,W,h);else g.rect(0,H-h,W,h)})}));
+T('Maske','diag','Çapraz Silme ↘',(g,A,B,p,e)=>{dc(g,A);cd(g,B,(g,W,H)=>{const d=(W+H)*e;g.moveTo(0,0);g.lineTo(d,0);g.lineTo(d-H,H);g.lineTo(0,H);g.closePath()})});
+T('Maske','diag2','Çapraz Silme ↙',(g,A,B,p,e)=>{dc(g,A);cd(g,B,(g,W,H)=>{const d=(W+H)*e;g.moveTo(W,0);g.lineTo(W-d,0);g.lineTo(W-d+H,H);g.lineTo(W,H);g.closePath()})});
+[['soft_l','Yumuşak Silme →',0],['soft_u','Yumuşak Silme ↓',1]].forEach(([id,n,v])=>T('Maske',id,n,(g,A,B,p,e)=>{const W=g.canvas.width,H=g.canvas.height;tmpC.width=W;tmpC.height=H;tmpG.globalCompositeOperation='source-over';tmpG.drawImage(B,0,0);tmpG.globalCompositeOperation='destination-in';const L=v?H:W,pos=e*L*1.4-L*.2,gr=v?tmpG.createLinearGradient(0,pos-H*.2,0,pos+H*.2):tmpG.createLinearGradient(pos-W*.2,0,pos+W*.2,0);gr.addColorStop(0,'#000');gr.addColorStop(1,'rgba(0,0,0,0)');tmpG.fillStyle=gr;tmpG.fillRect(0,0,W,H);dc(g,A);g.drawImage(tmpC,0,0)}));
+
+/* MG */
+T('MG','fliph','Kart Çevir Yatay',(g,A,B,p)=>{fill(g,'#000',1);dc(g,p<.5?A:B,{sx:Math.max(.001,abs(cos(PI*p))),s:.9+.1*abs(cos(PI*p))})});
+T('MG','flipv','Kart Çevir Dikey',(g,A,B,p)=>{fill(g,'#000',1);dc(g,p<.5?A:B,{sy:Math.max(.001,abs(cos(PI*p))),s:.9+.1*abs(cos(PI*p))})});
+T('MG','cubeh','Küp Yatay',(g,A,B,p,e)=>{fill(g,'#000',1);dc(g,A,{sx:Math.max(.001,1-e),x:-e/2});dc(g,B,{sx:Math.max(.001,e),x:(1-e)/2});fill(g,'#000',hump(p)*.25)});
+T('MG','cubev','Küp Dikey',(g,A,B,p,e)=>{fill(g,'#000',1);dc(g,A,{sy:Math.max(.001,1-e),y:-e/2});dc(g,B,{sy:Math.max(.001,e),y:(1-e)/2});fill(g,'#000',hump(p)*.25)});
+T('MG','cardtoss','Kart Fırlat',(g,A,B,p,e)=>{dc(g,B,{s:.9+.1*e});dc(g,A,{x:e*.9,y:-e*.6,r:e*.8,s:1-e*.4})});
+T('MG','pop','Patlama',(g,A,B,p)=>{dc(g,A,{a:1-p*.5});dc(g,B,{s:Math.max(.01,backOut(p))})});
+T('MG','stamp','Damga',(g,A,B,p,e,W,H,gt)=>{dc(g,A);if(p<.6)dc(g,B,{s:3-2*ease(p/.6),a:p/.6});else{const k=(1-(p-.6)/.4)*.03,f=Math.floor(gt*40);dc(g,B,{x:(rnd(f)-.5)*k,y:(rnd(f+1)-.5)*k})}});
+T('MG','tiles','Döşeme Çevir',(g,A,B,p)=>{fill(g,'#000',1);const W=g.canvas.width,H=g.canvas.height,c=4,r=Math.round(c*H/W),w=W/c,h=H/r;for(let y=0;y<r;y++)for(let x=0;x<c;x++){const q=clamp(p*1.6-(x+y)/(c+r)*.6,0,1),src=q<.5?A:B,sx=Math.max(.001,abs(cos(PI*q)));g.save();g.translate(x*w+w/2,y*h+h/2);g.scale(sx,1);g.drawImage(src,x*w,y*h,w,h,-w/2,-h/2,w,h);g.restore()}});
+T('MG','bars','Renkli Çubuklar',(g,A,B,p)=>{const W=g.canvas.width,H=g.canvas.height;dc(g,p<.5?A:B);['#ff2d6f','#7b5cff','#00d4ff','#ffd400'].forEach((c,i)=>{const q=clamp(p*1.5-i*.12,0,1),x=W*(-1+q*2);g.fillStyle=c;g.fillRect(x,0,W,H)})});
+T('MG','burst','Renk Patlaması',(g,A,B,p)=>{dc(g,A);const W=g.canvas.width,H=g.canvas.height,R=Math.hypot(W,H)*.6;['#ffd400','#ff2d6f','#7b5cff'].forEach((c,i)=>{const q=clamp(p*1.6-i*.2,0,1);g.fillStyle=c;g.beginPath();g.arc(W/2,H/2,R*ease(q),0,7);g.fill()});cd(g,B,(g,W,H)=>g.arc(W/2,H/2,R*ease(clamp(p*1.6-.6,0,1)),0,7))});
+T('MG','zigzag','Zikzak',(g,A,B,p,e)=>{dc(g,A);cd(g,B,(g,W,H)=>{const x0=(W*1.3)*e-W*.15,n=8;g.moveTo(0,0);for(let i=0;i<=n;i++)g.lineTo(x0+(i%2?W*.08:-W*.08),H*i/n);g.lineTo(0,H);g.closePath()})});
+T('MG','roll','Yuvarlan',(g,A,B,p,e)=>{dc(g,A,{y:e,r:e*.5,s:1-e*.3});dc(g,B,{y:-(1-e),r:-(1-e)*.5,s:.7+.3*e})});
+
+/* Bindirme */
+T('Bindirme','screen','Ekran Karışımı',(g,A,B,p,e)=>{dc(g,A,{a:1-e*.5});dc(g,B,{op:'screen',a:Math.min(1,e*1.5)});if(p>.6)dc(g,B,{a:(p-.6)/.4})});
+T('Bindirme','multiply','Çarpım Karışımı',(g,A,B,p,e)=>{dc(g,A);dc(g,B,{op:'multiply',a:hump(p)});dc(g,B,{a:e})});
+T('Bindirme','dexpo','Çift Pozlama',(g,A,B,p,e)=>{dc(g,A);dc(g,B,{op:'lighten',a:Math.min(1,e*1.6),s:1.2-.2*e});if(p>.7)dc(g,B,{a:(p-.7)/.3})});
+T('Bindirme','colorwash','Renk Dalgası',(g,A,B,p,e)=>{const W=g.canvas.width,H=g.canvas.height;dc(g,p<.5?A:B);g.save();const gr=g.createLinearGradient(0,0,W,H);gr.addColorStop(0,'#ff2d6f');gr.addColorStop(1,'#7b5cff');g.globalAlpha=hump(p);g.fillStyle=gr;g.fillRect(0,0,W,H);g.restore()});
+T('Bindirme','ink','Mürekkep',(g,A,B,p)=>{dc(g,A);cd(g,B,(g,W,H)=>{const R=Math.max(W,H);for(let i=0;i<14;i++){const q=clamp(p*1.5-rnd(i+5)*.5,0,1);if(q<=0)continue;const x=rnd(i)*W,y=rnd(i+20)*H;g.moveTo(x,y);g.arc(x,y,R*.6*ease(q),0,7)}})});
+T('Bindirme','difference','Fark',(g,A,B,p,e)=>{dc(g,A);dc(g,B,{op:'difference',a:hump(p)});if(p>.5)dc(g,B,{a:(p-.5)*2})});
+
+/* Sosyal */
+T('Sosyal','swipeup','Yukarı Kaydır (Reels)',(g,A,B,p)=>{const b=backOut(p);dc(g,A,{y:-b});dc(g,B,{y:1-b})});
+T('Sosyal','swipel','Sola Kaydır (Hikaye)',(g,A,B,p)=>{const b=backOut(p);dc(g,A,{x:-b,s:1-p*.15});dc(g,B,{x:1-b})});
+T('Sosyal','shutter','Deklanşör',(g,A,B,p)=>{const W=g.canvas.width,H=g.canvas.height,q=1-abs(p*2-1);dc(g,p<.5?A:B);g.fillStyle='#000';g.fillRect(0,0,W,H/2*q);g.fillRect(0,H-H/2*q,W,H/2*q)});
+T('Sosyal','heartpop','Kalp Patlaması',(g,A,B,p)=>{const W=g.canvas.width,H=g.canvas.height;dc(g,A);if(p<.4){g.fillStyle='#ff3d7f';shapePath('heart',g,W,H,Math.min(W,H)*.35*backOut(p/.4));g.fill()}else cd(g,B,(g,W,H)=>shapePath('heart',g,W,H,Math.min(W,H)*.35+Math.hypot(W,H)*1.4*ease((p-.4)/.6)))});
+T('Sosyal','likeburst','Beğeni Patlaması',(g,A,B,p,e)=>{const W=g.canvas.width,H=g.canvas.height;dc(g,A);dc(g,B,{a:e,s:1.2-.2*e});for(let i=0;i<16;i++){const a=i*PI/8,r=Math.min(W,H)*.45*ease(p);g.globalAlpha=1-p;g.fillStyle=['#ff2d6f','#ffd400','#00d4ff','#7bff5c'][i%4];g.beginPath();g.arc(W/2+cos(a)*r,H/2+sin(a)*r,Math.min(W,H)*.03,0,7);g.fill()}g.globalAlpha=1});
+T('Sosyal','polaroid','Polaroid',(g,A,B,p)=>{dc(g,p<.5?A:B,{s:p<.5?1:.85+.15*ease((p-.5)*2),r:p<.5?0:(1-p)*.1});fill(g,'#fff',Math.pow(hump(p),4))});
+T('Sosyal','zoomcut','Vuruş Zoom',(g,A,B,p)=>{if(p<.5)dc(g,A,{s:1+ease(p*2)*.35});else dc(g,B,{s:1.25-.25*ease((p-.5)*2)})});
+
+/* Eski kimlikler */
+Object.assign(TX,{slidel:TX.slide_l,slideu:TX.slide_u,push:TX.push_l,zoom:TX.zfadein,wipe:TX.wipe_r,circle:TX.m_circle,spin:TX.rotcw});
+const TRANS_IDS=Object.values(TCAT).flat().filter(k=>k!=='none');
+const TCATS=Object.keys(TCAT);
 function compose(type,p,gt){
-  const g=cx,W=cv.width,H=cv.height,e=ease(p);
+  const g=cx,W=cv.width,H=cv.height,t=TX[type]||TX.fade;
   g.save();g.fillStyle='#000';g.fillRect(0,0,W,H);
-  switch(type){
-    case'fade':drawC(g,offA,1,0,1,0,0);drawC(g,offB,1,0,e,0,0);break;
-    case'black':case'white':drawC(g,p<.5?offA:offB,1,0,1,0,0);g.fillStyle=type==='black'?'#000':'#fff';g.globalAlpha=1-Math.abs(p*2-1);g.fillRect(0,0,W,H);break;
-    case'slidel':drawC(g,offA,1,0,1,-W*.3*e,0);drawC(g,offB,1,0,1,W*(1-e),0);break;
-    case'slideu':drawC(g,offA,1,0,1,0,-H*.3*e);drawC(g,offB,1,0,1,0,H*(1-e));break;
-    case'push':drawC(g,offA,1,0,1,-W*e,0);drawC(g,offB,1,0,1,W*(1-e),0);break;
-    case'zoom':drawC(g,offA,1+e*.8,0,1,0,0);drawC(g,offB,1.5-.5*e,0,e,0,0);break;
-    case'wipe':drawC(g,offA,1,0,1,0,0);g.beginPath();g.rect(0,0,W*e,H);g.clip();drawC(g,offB,1,0,1,0,0);break;
-    case'diag':drawC(g,offA,1,0,1,0,0);{const d=(W+H)*e;g.beginPath();g.moveTo(0,0);g.lineTo(d,0);g.lineTo(d-H,H);g.lineTo(0,H);g.closePath();g.clip();drawC(g,offB,1,0,1,0,0)}break;
-    case'circle':drawC(g,offA,1,0,1,0,0);g.beginPath();g.arc(W/2,H/2,Math.hypot(W,H)/2*e,0,7);g.clip();drawC(g,offB,1,0,1,0,0);break;
-    case'spin':drawC(g,offA,1-e*.7,e*Math.PI*.6,1-e,0,0);drawC(g,offB,.3+.7*e,(e-1)*Math.PI*.6,e,0,0);break;
-    case'blur':g.filter=`blur(${Math.round((1-Math.abs(p*2-1))*22)}px)`;drawC(g,p<.5?offA:offB,1,0,1,0,0);break;
-    case'glitch':{drawC(g,p<.5?offA:offB,1,0,1,0,0);const ph=Math.floor(gt*30);for(let i=0;i<9;i++){const y=rnd(ph*7+i)*H,h=H*(.02+rnd(ph*3+i)*.08),o=(rnd(ph*5+i)-.5)*W*.25;g.drawImage(rnd(ph+i)>.5?offA:offB,0,y,W,h,o,y,W,h)}break}
-    default:drawC(g,offB,1,0,1,0,0);
-  }
+  try{t.f?t.f(g,offA,offB,p,ease(p),W,H,gt):dc(g,offB)}catch(err){console.log(err);dc(g,p<.5?offA:offB)}
   g.restore();
 }
 function render(t){
@@ -406,7 +557,7 @@ function syncVideos(t){
   clips.concat(overlays).forEach(c=>{
     if(c.type!=='video')return;
     const v=c.el,act=t>=c.start&&t<c.start+c.dur,want=c.trim+clamp(t-c.start,0,c.dur);
-    if(c.gain)c.gain.gain.value=c.vol;
+    if(c.gain)c.gain.gain.value=music.clipMute&&!c.kind?0:c.vol;
     if(playing){
       if(act){if(v.paused){v.currentTime=want;v.play().catch(()=>{})}else if(Math.abs(v.currentTime-want)>.3)v.currentTime=want}
       else{if(!v.paused)v.pause();if(t>=c.start-1&&t<c.start&&Math.abs(v.currentTime-c.trim)>.05&&!v.seeking)v.currentTime=c.trim}
@@ -424,11 +575,12 @@ function loop(){
   if(!playing)return;
   const t=clock();
   if(t>=total){curT=total;pause();render(Math.max(0,total-.001));updTime();const f=onEnd;onEnd=null;f&&f();return}
+  if(stopAt&&t>=stopAt){curT=stopAt;pause();updTime();return}
   curT=t;syncVideos(t);render(t);updTime();
   if(exporting)exporting.prog(t/total);
   raf=requestAnimationFrame(loop);
 }
-function pause(){playing=false;cancelAnimationFrame(raf);stopMusic();clips.concat(overlays).forEach(c=>c.type==='video'&&c.el.pause());updBtn();render(curT)}
+function pause(){stopAt=0;playing=false;cancelAnimationFrame(raf);stopMusic();clips.concat(overlays).forEach(c=>c.type==='video'&&c.el.pause());updBtn();render(curT)}
 function updBtn(){$('#playBtn').textContent=playing?'❚❚':'▶'}
 function updTime(){
   $('#time').textContent=fmt(curT)+' / '+fmt(total);if(!seeking)$('#seek').value=total?curT/total*1000:0;
@@ -507,6 +659,9 @@ $('#tools').onclick=e=>{
   const b=e.target.closest('button');if(!b)return;
   switch(b.dataset.tool){
     case'media':$('#fMedia').click();break;
+    case'slide':$('#fSlide').click();break;
+    case'mp3':$('#fMusic').click();break;
+    case'va':$('#fVA').click();break;
     case'text':newOverlay('text');break;
     case'sticker':newOverlay('sticker',{y:.35,loop:'float'});break;
     case'layer':if(!clips.length)return toast('Önce + Medya ile fotoğraf/video ekle');$('#fOver').click();break;
@@ -538,16 +693,18 @@ function drawTL(){
   });
   overlays.forEach(o=>{
     const lab={text:'T '+esc(o.text.split('\n')[0]),sticker:o.emoji+' Çıkartma',media:(o.type==='video'?'🎬':'🖼')+' Katman',effect:'✨ '+EFFECTS[o.effect]}[o.kind];
-    h+=`<div class="ob ${o.kind} ${o===selO?'sel':''}" data-oi="${o.id}" style="left:${X(o.start)}px;width:${Math.max(26,o.dur*PPS)}px;top:${76+o._lane*28}px">${lab}<div class="hd"></div></div>`;
+    h+=`<div class="ob ${o.kind} ${o===selO?'sel':''}" data-oi="${o.id}" style="left:${X(o.start)}px;width:${Math.max(26,o.dur*PPS)}px;top:${(music.mode!=='none'?96:76)+o._lane*28}px">${lab}<div class="hd"></div></div>`;
   });
+  if(music.mode!=='none')h+=`<div class="mb" style="left:${X(0)}px;width:${Math.max(40,total*PPS)}px">♪ ${esc(music.mode==='file'?music.fileName:STYLES[music.style][0]+' (hazır müzik)')}</div>`;
   h+='<div id="ph"></div>';
-  tin.innerHTML=h;tin.style.width=(X(total)+160)+'px';tin.style.height=(80+lanes.length*28)+'px';
+  tin.innerHTML=h;tin.style.width=(X(total)+160)+'px';tin.style.height=(80+(music.mode!=='none'?20:0)+lanes.length*28)+'px';
   updTime();
 }
 let tdrag=null;
 const tlTime=e=>{const r=$('#tlin').getBoundingClientRect();return clamp((e.clientX-r.left-PAD)/PPS,0,total)};
 $('#tlin').addEventListener('click',e=>{
   if(e.target.closest('.ob'))return;
+  if(e.target.closest('.mb')){selO=null;tab='music';refreshUI();return}
   if(playing)pause();
   const cb=e.target.closest('.cb'),t=tlTime(e);
   if(cb){sel=+cb.dataset.ci;selO=null;drawTabs();drawTL();renderPanel()}
@@ -626,7 +783,14 @@ function renderPanel(){
   }else if(tab==='filter')h+=chips(FILTERS,c.filter,'filter')+all('filter');
   else if(tab==='effect')h+=chips(EFFECTS,c.effect,'effect')+all('effect');
   else if(tab==='motion')h+=chips(MOTIONS,c.motion,'motion')+all('motion');
-  else if(tab==='trans'){h+=sel===0?'<p class="hint">İlk klibin öncesinde geçiş olmaz; geçiş, seçili klibe <b>giriş</b> efektidir.</p>':'<div class="h">Bu klibe giriş geçişi</div>';h+=chips(TRANS,c.trans,'trans')+all('trans')}
+  else if(tab==='trans'){
+    if(sel===0)h+='<p class="hint" style="margin-top:0">İlk klibin önünde geçiş olmaz. Geçiş, seçili klibe <b>girişte</b> uygulanır; 2. klibi seç ya da “Tümüne” kullan.</p>';
+    const cat=tcat||(TX[c.trans]&&TX[c.trans].cat)||'Temel';
+    h+=`<div class="h">${TRANS_IDS.length} geçiş · kategori</div>`+chips(Object.fromEntries(TCATS.map(k=>[k,k+' ('+TCAT[k].filter(x=>x!=='none').length+')'])),cat,'tcat');
+    h+='<div class="h">Geçiş (dokununca önizler)</div>'+chips(Object.fromEntries(TCAT[cat].map(k=>[k,TX[k].n])),c.trans,'trans');
+    h+=slider('Süre','td',.2,2,.1,c.td||TD,'s');
+    h+='<div class="chips"><button class="btn" data-all="trans">Tümüne uygula</button><button class="btn" data-rnd="all">🎲 Tümüne rastgele</button><button class="btn" data-rnd="cat">🎲 Bu kategoriden rastgele</button></div>';
+  }
   else if(tab==='text'){
     h+='<p class="hint" style="margin-top:0">Bu yazı klip boyunca görünür. Serbest konumlu yazı için üstteki <b>T Yazı</b> düğmesini kullan.</p>';
     h+=`<textarea id="txt" rows="2" placeholder="Yazını buraya yaz…">${esc(c.text)}</textarea>`;
@@ -639,8 +803,10 @@ function renderPanel(){
     const cur=music.mode==='none'?'none':music.mode==='file'?'file':music.style;
     const opts={none:'Müzik yok'};Object.entries(STYLES).forEach(([k,v])=>opts[k]='♪ '+v[0]);opts.file='📁 Dosyadan seç';
     h+='<div class="h">Arka plan müziği</div>'+chips(opts,cur,'music');
-    if(music.mode==='file')h+=`<p class="hint">Dosya: ${esc(music.fileName)}</p>`;
-    h+=slider('Ses','mvol',0,1,.05,music.vol);
+    if(music.mode==='file'){h+=`<p class="hint">Seçili: <b>${esc(music.fileName)}</b></p>`;h+=slider('Müziğin başı','moff',0,Math.max(0,music.fileBuf.duration-1).toFixed(1),.5,music.off||0,'s')}
+    h+=slider('Müzik sesi','mvol',0,1,.05,music.vol);
+    h+='<div class="h">Kliplerin kendi sesi</div>'+chips({on:'Açık',off:'Kapalı (sadece müzik)'},music.clipMute?'off':'on','cmute');
+    h+='<div class="chips"><button class="btn pri" data-mt="mp3">🎵 MP3 / ses dosyası seç</button><button class="btn pri" data-mt="va">🎬 Videodan sesi al</button></div>';
     h+='<p class="hint">Hazır müzikler uygulamanın içinde üretilir, telif sorunu yoktur. Video bitince müzik yavaşça kısılır. Videoların kendi sesi Düzenle sekmesinden ayarlanır.</p>';
   }else if(tab==='auto'){
     h+='<div class="h">Tek dokunuşla şablon</div><div class="tpl">'+TEMPLATES.map((t,i)=>`<button data-tpl="${i}" style="background:linear-gradient(135deg,${t.c})">${t.n}<small>${t.d}</small></button>`).join('')+'</div>';
@@ -668,6 +834,14 @@ $('#panel').addEventListener('click',async e=>{
     else if(a==='del'){overlays.splice(overlays.indexOf(o),1);if(o.el)o.el.pause();selO=null;tab='edit'}
     refreshUI();if(selO&&(curT<selO.start||curT>selO.start+selO.dur))seekTo(selO.start+.3);return;
   }
+  if(b.dataset.mt){$(b.dataset.mt==='mp3'?'#fMusic':'#fVA').click();return}
+  if(b.dataset.rnd){
+    const pool=b.dataset.rnd==='all'?TRANS_IDS:TCAT[tcat||(TX[c.trans]&&TX[c.trans].cat)||'Temel'].filter(x=>x!=='none');
+    clips.forEach((x,i)=>{if(i>0)x.trans=pool[Math.floor(Math.random()*pool.length)]});
+    if(playing)pause();refreshUI();toast('Her geçiş rastgele seçildi — ▶ ile izle');return;
+  }
+  if(b.dataset.k==='tcat'){tcat=b.dataset.v;renderPanel();return}
+  if(b.dataset.k==='cmute'){music.clipMute=b.dataset.v==='off';syncVideos(curT);renderPanel();return}
   if(b.dataset.k){
     const k=b.dataset.k,v=b.dataset.v;
     if(k==='music'){
@@ -675,11 +849,11 @@ $('#panel').addEventListener('click',async e=>{
       if(v==='none')music.mode='none';else{music.mode='gen';music.style=v}
       music.key='';if(playing)pause();
     }else{c[k]=v;if(k==='trans'){layout();drawTL()}
-      if(k==='trans'&&sel>0)seekTo(Math.max(0,c.start-.15));else if(k==='tanim')seekTo(c.start+.01);
+      if(k==='trans'){renderPanel();if(sel>0)previewTrans(c);return}else if(k==='tanim')seekTo(c.start+.01);
     }
-    renderPanel();if(!playing)render(curT);return;
+    drawTL();renderPanel();if(!playing)render(curT);return;
   }
-  if(b.dataset.all){const k=b.dataset.all;clips.forEach(x=>{if(k==='dur'){if(x.type!=='video')x.dur=c.dur}else x[k]=c[k]});layout();drawTL();render(curT);toast('Tüm kliplere uygulandı');return}
+  if(b.dataset.all){const k=b.dataset.all;clips.forEach(x=>{if(k==='dur'){if(x.type!=='video')x.dur=c.dur}else{x[k]=c[k];if(k==='trans')x.td=c.td}});layout();drawTL();render(curT);toast('Tüm kliplere uygulandı');return}
   if(b.dataset.a){
     const a=b.dataset.a;
     if(a==='del'){if(c.el)c.el.pause();clips.splice(sel,1);sel=Math.min(sel,clips.length-1)}
@@ -695,6 +869,8 @@ $('#panel').addEventListener('input',e=>{
   if(t.dataset.s){
     let k=t.dataset.s;const v=+t.value;t.nextElementSibling.textContent=v.toFixed(+t.step<1?1:0)+t.dataset.u;
     if(k==='mvol'){music.vol=v;if(musicGain)musicGain.gain.setValueAtTime(v,actx.currentTime);return}
+    if(k==='moff'){music.off=v;if(playing)pause();return}
+    if(k==='td'){const c=clips[sel];c.td=v;if(playing)pause();layout();drawTL();seekTo(Math.max(0,c.start+.01));return}
     if(k.startsWith('o.')){
       const o=selO;k=k.slice(2);o[k]=v;
       if(k==='start'||k==='dur'){if(k==='start')o.dur=Math.min(o.dur,Math.max(.3,total-o.start));drawTL();seekTo(k==='start'?o.start+.05:o.start+o.dur-.05)}
@@ -748,11 +924,51 @@ function applyTpl(T){
   if(playing)pause();layout();drawTL();renderPanel();seekTo(0);toast(T.n+' uygulandı — ▶ ile izle');
 }
 $('#fMedia').onchange=e=>{addFiles([...e.target.files]);e.target.value=''};
+function setMusicBuf(buf,name){
+  music.fileBuf=buf;music.fileName=name;music.mode='file';music.off=0;music.key='';
+  if(playing)pause();selO=null;tab='music';refreshUI();toast('Müzik eklendi: '+name);
+}
 $('#fMusic').onchange=async e=>{
   const f=e.target.files[0];e.target.value='';if(!f)return;
-  try{ensureAudio();toast('Müzik yükleniyor…');music.fileBuf=await actx.decodeAudioData(await f.arrayBuffer());music.fileName=f.name;music.mode='file';if(playing)pause();renderPanel();toast('Müzik eklendi')}
+  try{ensureAudio();toast('Müzik yükleniyor…');setMusicBuf(await actx.decodeAudioData(await f.arrayBuffer()),f.name)}
   catch(err){toast('Bu ses dosyası açılamadı')}
 };
+function recordAudio(f){
+  return new Promise((res,rej)=>{
+    const v=document.createElement('video');v.playsInline=true;v.src=URL.createObjectURL(f);
+    const src=actx.createMediaElementSource(v),d=actx.createMediaStreamDestination();src.connect(d);
+    const rec=new MediaRecorder(d.stream),ch=[];
+    rec.ondataavailable=e=>{if(e.data.size)ch.push(e.data)};
+    rec.onstop=async()=>{try{res(await actx.decodeAudioData(await new Blob(ch).arrayBuffer()))}catch(err){rej(err)}};
+    v.onended=()=>rec.stop();v.onerror=rej;
+    rec.start();v.play().catch(rej);
+  });
+}
+$('#fVA').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  ensureAudio();await actx.resume();
+  showOv('<h3>Videonun sesi ayrılıyor…</h3><p class="hint">Görüntü kullanılmaz, sadece sesi müzik olarak eklenir.</p>');
+  const name='🎬 '+f.name;
+  try{const buf=await actx.decodeAudioData(await f.arrayBuffer());hideOv();setMusicBuf(buf,name)}
+  catch(err){
+    try{showOv('<h3>Ses kaydediliyor…</h3><p class="hint">Bu video için ses gerçek zamanlı alınıyor; video süresi kadar sürer.</p>');const buf=await recordAudio(f);hideOv();setMusicBuf(buf,name)}
+    catch(e2){hideOv();toast('Bu videodan ses alınamadı (videoda ses olmayabilir)')}
+  }
+};
+$('#fSlide').onchange=async e=>{
+  const fs=[...e.target.files].filter(f=>f.type.startsWith('image'));e.target.value='';if(!fs.length)return;
+  const old=new Set(clips.map(c=>c.id));
+  await addFiles(fs);
+  const mo=['zoomin','zoomout','panl','panr','panup','pandown','rotate'];let n=0;
+  clips.forEach(c=>{if(old.has(c.id))return;n++;c.dur=3;c.motion=mo[Math.floor(Math.random()*mo.length)];c.trans=TRANS_IDS[Math.floor(Math.random()*TRANS_IDS.length)];c.td=.8});
+  if(music.mode==='none'){music.mode='gen';music.style='duygusal';music.key=''}
+  sel=clips.findIndex(c=>!old.has(c.id));if(sel===0&&clips.length>1)sel=1;tab='trans';selO=null;refreshUI();seekTo(0);
+  toast(`Slayt hazır: ${n} fotoğraf, her arada farklı geçiş. ▶ ile izle`,3500);
+};
+function previewTrans(c){
+  if(playing)pause();layout();if(!c.T)return;
+  stopAt=0;play(Math.max(0,c.start-.4)).then(()=>{stopAt=c.start+c.T+.5});
+}
 $('#playBtn').onclick=()=>playing?pause():play(curT);
 $('#seek').oninput=e=>{seeking=true;if(playing)pause();layout();seekTo(e.target.value/1000*total)};
 $('#seek').onchange=()=>{seeking=false};
