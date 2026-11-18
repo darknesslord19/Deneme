@@ -1,4 +1,4 @@
-name: Pulse Player APK
+name: Darknes Player APK
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
           mkdir -p out
           cp build.log out/ || true
           grep -nE "^e: |error:|What went wrong|FAILED|Unresolved|Exception" build.log | head -300 > out/errors.txt || true
-          cp app/build/outputs/apk/release/*.apk out/PulsePlayer.apk 2>/dev/null || true
+          cp app/build/outputs/apk/release/*.apk out/DarknesPlayer.apk 2>/dev/null || true
           echo "${{ steps.build.outcome }}" > out/status.txt
           echo "${{ github.sha }}" >> out/status.txt
           ls -la out
@@ -56,17 +56,17 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: steps.build.outcome == 'success'
         with:
-          name: PulsePlayer
-          path: out/PulsePlayer.apk
+          name: DarknesPlayer
+          path: out/DarknesPlayer.apk
 
       - name: GitHub Release
         if: steps.build.outcome == 'success'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: pulse-v1.0.${{ github.run_number }}
-          name: Pulse Player v1.0 (build ${{ github.run_number }})
-          files: out/PulsePlayer.apk
-          body: Pulse Player — müzik & video oynatıcı. APK'yı indirip kur.
+          tag_name: darknes-v1.2.${{ github.run_number }}
+          name: Darknes Player v1.2 (build ${{ github.run_number }})
+          files: out/DarknesPlayer.apk
+          body: Darknes Player — müzik & video oynatıcı. APK'yı indirip kur.
 
       - name: Fail if build failed
         if: steps.build.outcome != 'success'

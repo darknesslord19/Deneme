@@ -9,6 +9,7 @@ import com.pulse.player.player.MusicController
 class PulseApp : Application(), ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
+        com.pulse.player.ui.theme.ThemeState.load(this)
         MusicController.init(this)
     }
 

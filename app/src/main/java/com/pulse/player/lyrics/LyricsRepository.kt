@@ -96,7 +96,7 @@ object LyricsRepository {
             c = URL(url).openConnection() as HttpURLConnection
             c.connectTimeout = 8000
             c.readTimeout = 12000
-            c.setRequestProperty("User-Agent", "PulsePlayer/1.0 (Android; https://github.com/darknesslord19/deneme)")
+            c.setRequestProperty("User-Agent", "DarknesPlayer/1.2 (Android; https://github.com/darknesslord19/deneme)")
             if (c.responseCode != 200) null else c.inputStream.bufferedReader().use { it.readText() }
         } catch (_: Exception) {
             null

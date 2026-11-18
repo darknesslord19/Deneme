@@ -1,4 +1,4 @@
-# Pulse Player
+# Darknes Player
 
 Profesyonel Android müzik + video oynatıcı (Kotlin, Jetpack Compose, Media3/ExoPlayer).
 

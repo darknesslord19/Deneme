@@ -126,7 +126,7 @@ private fun PermissionScreen(onGrant: () -> Unit) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(Icons.Rounded.GraphicEq, null, tint = Neon, modifier = Modifier.size(72.dp))
             Spacer(Modifier.height(16.dp))
-            Text("Pulse Player", fontSize = 28.sp, fontWeight = FontWeight.Black)
+            Text("Darknes Player", fontSize = 28.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(8.dp))
             Text(
                 "Müziklerini ve videolarını listeleyebilmem için medya erişim izni gerekiyor.",

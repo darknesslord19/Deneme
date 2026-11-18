@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shuffle
@@ -105,6 +106,8 @@ fun LibraryScreen(
     var detailTitle by remember { mutableStateOf<String?>(null) }
     var detailSongs by remember { mutableStateOf<List<Song>>(emptyList()) }
     var detailArt by remember { mutableStateOf<Any?>(null) }
+    var showThemes by remember { mutableStateOf(false) }
+    if (showThemes) ThemeSheet { showThemes = false }
 
     BackHandler(enabled = detailTitle != null) { detailTitle = null }
 
@@ -120,12 +123,13 @@ fun LibraryScreen(
         Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 8.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 buildAnnotatedString {
-                    withStyle(SpanStyle(brush = Brush.linearGradient(listOf(Neon, Pink, Cyan)), fontWeight = FontWeight.Black)) { append("Pulse") }
+                    withStyle(SpanStyle(brush = Brush.linearGradient(listOf(Neon, Pink, Cyan)), fontWeight = FontWeight.Black)) { append("Darknes") }
                     withStyle(SpanStyle(color = Color.White, fontWeight = FontWeight.Light)) { append(" Player") }
                 },
                 fontSize = 30.sp,
                 modifier = Modifier.weight(1f)
             )
+            IconButton(onClick = { showThemes = true }) { Icon(Icons.Rounded.Palette, "Temalar", tint = Neon) }
             IconButton(onClick = { vm.load(force = true) }) { Icon(Icons.Rounded.Refresh, "Yenile") }
         }
         OutlinedTextField(

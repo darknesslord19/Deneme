@@ -1,7 +1,5 @@
 package com.pulse.player.ui
 
-import android.Manifest
-import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
@@ -87,7 +85,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
 import coil.compose.AsyncImage
@@ -123,11 +120,13 @@ fun NowPlayingScreen(vm: LibraryViewModel, onClose: () -> Unit) {
     var showEffects by remember { mutableStateOf(false) }
     var showQueue by remember { mutableStateOf(false) }
     var showSleep by remember { mutableStateOf(false) }
-    var hasRec by remember { mutableStateOf(ContextCompat.checkSelfPermission(ctx, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) }
-    val recLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { hasRec = it }
 
     val song = songOrNull
-    LaunchedEffect(song?.albumId) { accentTarget = extractAccent(ctx, song?.artUri)?.let { boost(it) } ?: Neon }
+    val dynamic = com.pulse.player.ui.theme.ThemeState.dynamicColor
+    val themeIdx = com.pulse.player.ui.theme.ThemeState.index
+    LaunchedEffect(song?.albumId, dynamic, themeIdx) {
+        accentTarget = if (dynamic) extractAccent(ctx, song?.artUri)?.let { boost(it) } ?: Neon else Neon
+    }
 
     Box(Modifier.fillMaxSize().background(Bg).clickable(remember { MutableInteractionSource() }, null) {}) {
         if (song != null) {
@@ -152,25 +151,8 @@ fun NowPlayingScreen(vm: LibraryViewModel, onClose: () -> Unit) {
                     Text("Çalan bir şey yok", color = TextDim)
                 } else Crossfade(mode, label = "mode") { m ->
                     when (m) {
-                        0 -> CoverMode(song, accent, playing, hasRec)
-                        1 -> Column(Modifier.fillMaxSize()) {
-                            Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(24.dp))
-                                .background(Color.Black.copy(alpha = 0.25f))
-                                .clickable { visStyle = VisStyle.entries[(visStyle.ordinal + 1) % VisStyle.entries.size]; Prefs.get(ctx).edit().putInt("vis_style", visStyle.ordinal).apply() }
-                            ) {
-                                AudioVisualizer(visStyle, accent, Modifier.fillMaxSize().padding(8.dp))
-                                if (!hasRec) PermHint(accent, Modifier.align(Alignment.BottomCenter)) { recLauncher.launch(Manifest.permission.RECORD_AUDIO) }
-                            }
-                            val chipColors = FilterChipDefaults.filterChipColors(selectedContainerColor = accent, selectedLabelColor = Color.White)
-                            val rowState = rememberLazyListState()
-                            LazyRow(state = rowState, modifier = Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                items(VisStyle.entries) { st ->
-                                    FilterChip(st == visStyle, {
-                                        visStyle = st; Prefs.get(ctx).edit().putInt("vis_style", st.ordinal).apply()
-                                    }, label = { Text(st.label) }, colors = chipColors)
-                                }
-                            }
-                        }
+                        0 -> CoverMode(song, accent, playing)
+                        1 -> SpectrumPanel(song, accent)
                         else -> LyricsView(song, accent, Modifier.fillMaxSize())
                     }
                 }
@@ -253,7 +235,7 @@ private fun ModeSelector(mode: Int, accent: Color, onSelect: (Int) -> Unit) {
 }
 
 @Composable
-private fun CoverMode(song: Song, accent: Color, playing: Boolean, hasRec: Boolean) {
+private fun CoverMode(song: Song, accent: Color, playing: Boolean) {
     var angle by remember { mutableFloatStateOf(0f) }
     var bass by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(playing) {
@@ -281,19 +263,6 @@ private fun CoverMode(song: Song, accent: Color, playing: Boolean, hasRec: Boole
             Box(Modifier.fillMaxSize(0.16f).clip(CircleShape).background(Bg.copy(alpha = 0.9f)))
             Box(Modifier.fillMaxSize(0.05f).clip(CircleShape).background(accent))
         }
-    }
-}
-
-@Composable
-private fun PermHint(accent: Color, modifier: Modifier, onGrant: () -> Unit) {
-    Column(
-        modifier.padding(12.dp).clip(RoundedCornerShape(16.dp)).background(Card.copy(alpha = 0.92f)).padding(12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("Gerçek zamanlı spektrum için ses analizi izni gerekli", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-        Text("Android bunu “Mikrofon” izni olarak gösterir; uygulama mikrofonu dinlemez, yalnızca çalan sesi analiz eder.", fontSize = 11.sp, color = TextDim)
-        Spacer(Modifier.height(6.dp))
-        Button(onClick = onGrant, colors = ButtonDefaults.buttonColors(containerColor = accent)) { Text("İzin Ver") }
     }
 }
 
